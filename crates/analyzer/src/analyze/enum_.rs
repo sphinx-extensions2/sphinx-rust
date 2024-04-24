@@ -16,8 +16,8 @@ pub struct Enum {
 
 impl Enum {
     /// Extract the relevant information from the AST
-    pub fn parse(ast: &ItemEnum) -> Self {
-        let name = ast.ident.to_string();
+    pub fn parse(parent: &str, ast: &ItemEnum) -> Self {
+        let name = format!("{}::{}", parent, ast.ident);
         let docstring = docstring_from_attrs(&ast.attrs);
         let variants = ast.variants.iter().map(Variant::parse).collect::<Vec<_>>();
         Self {
@@ -83,10 +83,10 @@ mod tests {
                 },
             }
         };
-        let enum_ = Enum::parse(&ast);
+        let enum_ = Enum::parse("crate", &ast);
         assert_yaml_snapshot!(enum_, @r###"
         ---
-        name: MyEnum
+        name: "crate::MyEnum"
         docstring: "Multi-line\ndocstring"
         variants:
           - name: MyVariant1

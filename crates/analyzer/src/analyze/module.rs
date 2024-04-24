@@ -8,8 +8,11 @@ use super::{docstring_from_attrs, enum_::Enum, struct_::Struct};
 pub struct Module {
     pub name: String,
     pub docstring: String,
+    /// The public declarations in the module
+    pub mod_declarations: Vec<String>,
     pub structs: Vec<Struct>,
     pub enums: Vec<Enum>,
+    // TODO traits, functions, impls, etc.
 }
 
 impl Module {
@@ -17,35 +20,39 @@ impl Module {
     pub fn parse(name: &str, content: &str) -> Result<Self, syn::Error> {
         let syntax = parse_file(content)?;
 
-        let docstring = docstring_from_attrs(&syntax.attrs);
-
-        let mut structs = vec![];
-        let mut enums = vec![];
+        let mut mod_ = Self {
+            name: name.to_string(),
+            docstring: docstring_from_attrs(&syntax.attrs),
+            mod_declarations: vec![],
+            structs: vec![],
+            enums: vec![],
+        };
 
         for item in syntax.items {
             match &item {
+                syn::Item::Mod(mod_item) => {
+                    if let syn::Visibility::Public(_) = mod_item.vis {
+                        // TODO handle modules that are not just declarations
+                        mod_.mod_declarations.push(mod_item.ident.to_string());
+                    }
+                }
                 syn::Item::Struct(struct_item) => {
                     if let syn::Visibility::Public(_) = struct_item.vis {
-                        let struct_ = Struct::parse(struct_item);
-                        structs.push(struct_);
+                        let struct_ = Struct::parse(name, struct_item);
+                        mod_.structs.push(struct_);
                     }
                 }
                 syn::Item::Enum(enum_item) => {
                     if let syn::Visibility::Public(_) = enum_item.vis {
-                        let enum_ = Enum::parse(enum_item);
-                        enums.push(enum_);
+                        let enum_ = Enum::parse(name, enum_item);
+                        mod_.enums.push(enum_);
                     }
                 }
                 _ => {}
             }
         }
 
-        Ok(Self {
-            name: name.to_string(),
-            docstring,
-            structs,
-            enums,
-        })
+        Ok(mod_)
     }
 
     pub fn to_json(&self) -> String {
@@ -73,9 +80,10 @@ pub enum MyEnum {
         ---
         name: test
         docstring: "Multi-line\ndocstring"
+        mod_declarations: []
         structs: []
         enums:
-          - name: MyEnum
+          - name: "test::MyEnum"
             docstring: ""
             variants:
               - name: MyVariant1

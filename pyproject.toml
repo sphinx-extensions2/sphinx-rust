@@ -49,6 +49,9 @@ dev = [
   "pytest",
   "ipython"
 ]
+docs = [
+  "furo"
+]
 
 [tool.ruff.lint]
 preview = true
@@ -103,4 +106,14 @@ passenv = TERM
 allowlist_externals = bash
 commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
 commands = ipython {posargs}
+
+[testenv:docs]
+extras = docs
+passenv = TERM
+allowlist_externals =
+  bash
+  echo
+commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
+commands =  sphinx-build -nW --keep-going {posargs} -b html docs/ docs/_build/html
+commands_post = echo "open file://{toxinidir}/docs/_build/html/index.html"
 """

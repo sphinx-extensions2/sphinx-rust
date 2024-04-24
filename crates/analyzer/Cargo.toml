@@ -13,13 +13,16 @@ readme = "../../README.md"
 [lib]
 
 [dependencies]
+anyhow.workspace = true
 quote.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 syn.workspace = true
+toml.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

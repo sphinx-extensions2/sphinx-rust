@@ -28,8 +28,8 @@ pub struct Field {
 
 impl Struct {
     /// Extract the relevant information from the AST
-    pub fn parse(ast: &ItemStruct) -> Self {
-        let name = ast.ident.to_string();
+    pub fn parse(parent: &str, ast: &ItemStruct) -> Self {
+        let name = format!("{}::{}", parent, ast.ident);
         let docstring = docstring_from_attrs(&ast.attrs);
         let mut struct_ = Self {
             name,
@@ -72,10 +72,10 @@ mod tests {
             /// docstring
             pub struct MyStruct;
         };
-        let struct_ = Struct::parse(&ast);
+        let struct_ = Struct::parse("crate", &ast);
         assert_yaml_snapshot!(struct_, @r###"
         ---
-        name: MyStruct
+        name: "crate::MyStruct"
         docstring: "Multi-line\ndocstring"
         fields: []
         "###);
@@ -93,10 +93,10 @@ mod tests {
                 other: String,
             }
         };
-        let struct_ = Struct::parse(&ast);
+        let struct_ = Struct::parse("crate", &ast);
         assert_yaml_snapshot!(struct_, @r###"
         ---
-        name: MyStruct
+        name: "crate::MyStruct"
         docstring: "Multi-line\ndocstring"
         fields:
           - name: my_field

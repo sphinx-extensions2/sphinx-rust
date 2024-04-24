@@ -1,9 +1,14 @@
 //! This module contains the code for analyzing the input Rust code and extracting the necessary information from it.
 
+pub mod crate_;
 pub mod enum_;
 pub mod module;
 pub mod struct_;
 pub mod type_;
+
+pub use self::enum_::Enum;
+pub use self::module::Module;
+pub use self::struct_::Struct;
 
 /// Extracts the docstring from an object's attributes
 ///
