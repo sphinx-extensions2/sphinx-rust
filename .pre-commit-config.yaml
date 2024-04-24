@@ -1,0 +1,52 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: trailing-whitespace
+    exclude: ^tests/fixtures/.*
+  - id: end-of-file-fixer
+    exclude: .*\.rs
+  - id: check-yaml
+  - id: check-added-large-files
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.4.1
+  hooks:
+  - id: ruff
+    args: [--fix]
+  - id: ruff-format
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.9.0
+  hooks:
+  - id: mypy
+    additional_dependencies:
+    - types-docutils
+    - sphinx~=7.3
+
+- repo: local
+  hooks:
+  - id: cargo-check
+    name: cargo check
+    description: Check cargo packages for errors.
+    entry: cargo check
+    language: system
+    types: [rust]
+    pass_filenames: false
+  - id: cargo-clippy
+    name: cargo clippy
+    description: Lint rust sources
+    entry: cargo clippy
+    language: system
+    args: ["--fix", "--allow-staged", "--allow-dirty", "--", "-D", "warnings"]
+    types: [rust]
+    pass_filenames: false
+  - id: cargo-fmt
+    name: cargo fmt
+    description: Format files with cargo fmt.
+    entry: cargo fmt
+    language: rust
+    types: [rust]
+    args: ["--"]

@@ -1,0 +1,25 @@
+[package]
+name = "analyzer"
+version = "0.0.1"
+publish = false
+edition = "2021"
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+readme = "../../README.md"
+
+[lib]
+
+[dependencies]
+quote.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+syn.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

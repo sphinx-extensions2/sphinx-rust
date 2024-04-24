@@ -1,0 +1,106 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
+manifest-path = "crates/py_binding/Cargo.toml"
+
+[project]
+name = "sphinx_rust"
+dynamic = ["version"]
+description = "Sphinx plugin for documentation of Rust projects."
+authors = [{ name = "Chris Sewell", email = "chrisj_sewell@hotmail.com" }]
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+keywords = [
+  "sphinx",
+  "rust",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: FREE FOR NON-COMMERCIAL USE",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Rust",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+  "sphinx~=7.3"
+]
+
+[project.urls]
+Repository = "https://github.com/useblocks/sphinx-rust"
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ipython"
+]
+
+[tool.ruff.lint]
+preview = true
+extend-select = [
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "FURB",# refurb (modernising code)
+    "I",   # isort
+    "ICN", # flake8-import-conventions
+    "ISC", # flake8-implicit-str-concat
+    "N",   # pep8-naming
+    "PERF",# perflint (performance anti-patterns)
+    "PGH", # pygrep-hooks
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "PTH", # flake8-use-pathlib
+    "RUF", # Ruff-specific rules
+    "SIM", # flake8-simplify
+    "UP",  # pyupgrade
+    "T20", # flake8-print
+]
+extend-ignore = [
+    "ISC001",    # implicit-str-concat
+    "RUF012",    # typing.ClassVar
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+
+[tool.mypy]
+strict = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "if TYPE_CHECKING:",
+]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = dev
+
+[testenv]
+usedevelop = true
+
+[testenv:dev]
+extras = dev
+passenv = TERM
+; ensure that the compilation is up-to-date
+; There is an issue with mixing maturin with tox-conda, raising:
+; Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
+allowlist_externals = bash
+commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
+commands = ipython {posargs}
+"""

@@ -1,0 +1,22 @@
+[package]
+name = "rust_analyzer_py"
+version = "0.0.1"
+publish = false
+edition = "2021"
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+readme = "../../README.md"
+
+[lib]
+name = "sphinx_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+analyzer = { path = "../analyzer" }
+pyo3.workspace = true
+
+[lints]
+workspace = true
