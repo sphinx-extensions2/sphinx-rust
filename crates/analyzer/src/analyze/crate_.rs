@@ -1,8 +1,8 @@
 //! Analyze the crate
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::Module;
+use super::{Enum, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<Crate> {
     // check the path is a directory
@@ -36,6 +36,8 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
         name: cargo_toml.package.name,
         version: cargo_toml.package.version,
         modules: vec![],
+        structs: vec![],
+        enums: vec![],
     };
 
     // read the src/lib directory
@@ -46,17 +48,19 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
 
     // read the top-level module
     let content = std::fs::read_to_string(src)?;
-    let module = Module::parse(&crate_.name, &content)?;
-    let mut modules = module
-        .mod_declarations
+    let (module, structs, enums) = Module::parse(&crate_.name, &content)?;
+    let mut modules_to_read = module
+        .declarations
         .iter()
         .map(|s| (path.join("src"), s.to_string(), crate_.name.clone()))
         .collect::<Vec<_>>();
     crate_.modules.push(module);
+    crate_.structs.extend(structs);
+    crate_.enums.extend(enums);
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
-    while let Some((path, module_name, parent_path)) = modules.pop() {
+    while let Some((path, module_name, parent_path)) = modules_to_read.pop() {
         // TODO also check for directory with mod.rs
         let module_path = path.join(&module_name).with_extension("rs");
         if !module_path.exists() || read_modules.contains(&module_path) {
@@ -65,17 +69,22 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
         read_modules.push(module_path.clone());
         let sub_path = path.clone();
 
-        let content = std::fs::read_to_string(module_path)?;
+        let content = std::fs::read_to_string(&module_path)?;
         let path_name = format!("{}::{}", parent_path, module_name);
-        let module = Module::parse(&path_name, &content)?;
-        modules.extend(
+        let (module, structs, enums) = Module::parse(&path_name, &content).context(format!(
+            "Error parsing module {}",
+            module_path.to_str().unwrap()
+        ))?;
+        modules_to_read.extend(
             module
-                .mod_declarations
+                .declarations
                 .iter()
                 .map(|s| (sub_path.clone(), s.to_string(), path_name.clone()))
                 .collect::<Vec<_>>(),
         );
         crate_.modules.push(module);
+        crate_.structs.extend(structs);
+        crate_.enums.extend(enums);
     }
 
     Ok(crate_)
@@ -86,6 +95,8 @@ pub struct Crate {
     name: String,
     version: String,
     modules: Vec<Module>,
+    structs: Vec<Struct>,
+    enums: Vec<Enum>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -152,6 +163,8 @@ mod tests {
             pub mod my_submodule;
             /// The struct1 docstring
             pub struct DummyStruct1;
+            /// The enum1 docstring
+            pub enum DummyEnum1 {}
         "#,
         )?;
 
@@ -164,6 +177,8 @@ mod tests {
             //! The sub-module docstring
             /// The struct2 docstring
             pub struct DummyStruct2;
+            /// The enum2 docstring
+            pub enum DummyEnum2 {}
         "#,
         )?;
 
@@ -177,27 +192,29 @@ mod tests {
         modules:
           - name: my_crate
             docstring: The crate docstring
-            mod_declarations:
+            declarations:
               - my_module
-            structs: []
-            enums: []
           - name: "my_crate::my_module"
             docstring: The module docstring
-            mod_declarations:
+            declarations:
               - my_submodule
-            structs:
-              - name: "my_crate::my_module::DummyStruct1"
-                docstring: The struct1 docstring
-                fields: []
-            enums: []
           - name: "my_crate::my_module::my_submodule"
             docstring: The sub-module docstring
-            mod_declarations: []
-            structs:
-              - name: "my_crate::my_module::my_submodule::DummyStruct2"
-                docstring: The struct2 docstring
-                fields: []
-            enums: []
+            declarations: []
+        structs:
+          - name: "my_crate::my_module::DummyStruct1"
+            docstring: The struct1 docstring
+            fields: []
+          - name: "my_crate::my_module::my_submodule::DummyStruct2"
+            docstring: The struct2 docstring
+            fields: []
+        enums:
+          - name: "my_crate::my_module::DummyEnum1"
+            docstring: The enum1 docstring
+            variants: []
+          - name: "my_crate::my_module::my_submodule::DummyEnum2"
+            docstring: The enum2 docstring
+            variants: []
         "###);
 
         Ok(())
