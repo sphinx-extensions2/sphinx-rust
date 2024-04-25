@@ -14,6 +14,9 @@ pub use self::struct_::{Field, Struct};
 /// Extracts the docstring from an object's attributes
 ///
 /// An initial whitespace character is stripped from the start of each line.
+///
+/// :param attrs: The attributes of the object
+///
 // TODO also extract an optional docstring type from the attributes?
 pub(super) fn docstring_from_attrs(attrs: &[syn::Attribute]) -> String {
     attrs

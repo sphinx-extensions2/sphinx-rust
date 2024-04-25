@@ -1,5 +1,5 @@
-from docutils import nodes
-from sphinx.util.docutils import SphinxDirective
+from docutils import nodes, utils
+from sphinx.util.docutils import LoggingReporter, SphinxDirective
 from sphinx.util.logging import getLogger
 
 from sphinx_rust.sphinx_rust import load_crate, load_enums, load_modules, load_structs
@@ -31,9 +31,25 @@ class RustCrateDirective(SphinxDirective):
         self.doc.note_implicit_target(section, section)
         return section
 
-    def parse_docstring(self, docstring: str) -> nodes.paragraph:  # noqa: PLR6301
-        # TODO proper parsing
-        return nodes.paragraph(text=docstring)
+    def parse_docstring(
+        self, docstring: str, filetype: str = "restructuredtext"
+    ) -> list[nodes.Node]:
+        """parse into a dummy document and return created nodes."""
+        source_path = (
+            self.env.doc2path(  # TODO this actually should be the rust file path
+                self.env.docname
+            )
+        )
+        # TODO how to handle line numbers?
+        document = utils.new_document(source_path, self.doc.settings)
+        document.reporter = LoggingReporter.from_reporter(self.doc.reporter)
+        document.reporter.source = source_path
+        # TODO cache parser creation
+        parser = self.env.app.registry.create_source_parser(self.env.app, filetype)
+        parser.parse(docstring, document)
+        # TODO merge document metadata with parent document, e.g. targets etc?
+        # or docutils.Include actually runs the transforms on the included document, before returning its children
+        return document.children
 
     def run(self) -> list[nodes.Node]:  # noqa: PLR0912, PLR0914, PLR0915
         if not self.state_machine.match_titles:
@@ -61,7 +77,7 @@ class RustCrateDirective(SphinxDirective):
         # TODO self.env.note_dependency
 
         root = self.create_section(f"Crate {qualifier}")
-        # TODO add version
+        # TODO add version to section heading?
         if crate.docstring:
             root += self.parse_docstring(crate.docstring)
 
@@ -98,7 +114,7 @@ class RustCrateDirective(SphinxDirective):
                         field_list += field_node
                         if field.docstring:
                             field_list += nodes.field_body(
-                                "", self.parse_docstring(field.docstring)
+                                "", *self.parse_docstring(field.docstring)
                             )
 
         enums = load_enums(
@@ -122,7 +138,7 @@ class RustCrateDirective(SphinxDirective):
                         var_list += var_node
                         if var.docstring:
                             var_list += nodes.field_body(
-                                "", self.parse_docstring(var.docstring)
+                                "", *self.parse_docstring(var.docstring)
                             )
 
         return [root]
