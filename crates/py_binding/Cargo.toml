@@ -13,10 +13,13 @@ readme = "../../README.md"
 [lib]
 name = "sphinx_rust"
 crate-type = ["cdylib"]
+test = false  # we test this in Python land
 
 [dependencies]
 analyzer = { path = "../analyzer" }
 pyo3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

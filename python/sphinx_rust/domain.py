@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-# from typing import TYPE_CHECKING
-# from sphinx.directives import ObjectDescription
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
 from sphinx.domains import Domain
 
-from sphinx_rust.directives import RustModuleDirective
+from sphinx_rust.directives import RustCrateDirective
+from sphinx_rust.sphinx_rust import analyze_crate
 
+# from sphinx.directives import ObjectDescription
 # from sphinx.domains import Domain, ObjType
 # from sphinx.roles import XRefRole
 
 
-# if TYPE_CHECKING:
-#     from docutils.nodes import Element
-#     from sphinx.addnodes import desc_signature, pending_xref
-#     from sphinx.application import Sphinx
-#     from sphinx.builders import Builder
-#     from sphinx.environment import BuildEnvironment
-#     from sphinx.util.typing import ExtensionMetadata
+if TYPE_CHECKING:
+    from docutils.nodes import Element
+    from sphinx.addnodes import pending_xref
+    from sphinx.application import Sphinx
+    from sphinx.builders import Builder
+    from sphinx.environment import BuildEnvironment
 
 
 class RustDomain(Domain):
@@ -26,41 +28,41 @@ class RustDomain(Domain):
     label = "Rust"
 
     directives = {
-        "module": RustModuleDirective,
+        "crate": RustCrateDirective,
     }
 
+    @classmethod
+    def app_setup(cls, app: Sphinx) -> None:
+        app.add_config_value("rust_crates", [], "env")
+        app.connect("builder-inited", cls.on_builder_inited)
+        app.add_domain(cls)
 
-#     object_types = {
-#         "module": ObjType("module", "module"),
-#         "struct": ObjType("struct", "struct"),
-#         "field": ObjType("field", "field"),
-#     }
+    @staticmethod
+    def on_builder_inited(app: Sphinx) -> None:
+        # create the cache directory
+        app.env.rust_cache_path = cache = Path(str(app.outdir)) / "rust_cache"  # type: ignore[attr-defined]
+        cache.mkdir(exist_ok=True)
+        # analyze the crates
+        for crate in app.config.rust_crates:
+            path = Path(str(app.srcdir)) / str(crate)
+            # TODO log info, handle errors
+            analyze_crate(str(path), str(cache))
 
-#     directives = {
-#         "module": RustModuleDirective,
-#         "struct": RustStructDirective,
-#         "field": RustFieldDirective,
-#     }
+    def merge_domaindata(
+        self, _docnames: list[str], _otherdata: dict[str, Any]
+    ) -> None:
+        pass
 
-#     roles = {
-#         "module": RustModuleRole(),
-#         "struct": RustStructRole(),
-#         "field": RustFieldRole(),
-#     }
-
-#     def merge_domaindata(self, docnames: list[str], otherdata: dict[str, Any]) -> None:
-#         raise NotImplementedError  # TODO
-
-#     def resolve_any_xref(
-#         self,
-#         env: BuildEnvironment,
-#         fromdocname: str,
-#         builder: Builder,
-#         target: str,
-#         node: pending_xref,
-#         contnode: Element,
-#     ) -> list[tuple[str, Element]]:
-#         return []
+    def resolve_any_xref(  # noqa: PLR6301
+        self,
+        _env: BuildEnvironment,
+        _fromdocname: str,
+        _builder: Builder,
+        _target: str,
+        _node: pending_xref,
+        _contnode: Element,
+    ) -> list[tuple[str, Element]]:
+        return []
 
 
 # class RustModuleDirective(ObjectDescription[str]):

@@ -8,7 +8,10 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // check the path is a directory
     let path = std::path::Path::new(path);
     if !path.is_dir() {
-        return Err(anyhow::anyhow!("Path is not a directory"));
+        return Err(anyhow::anyhow!(format!(
+            "Path is not a directory: {}",
+            path.to_string_lossy()
+        )));
     }
     // check if Cargo.toml exists
     let cargo_toml_path = path.join("Cargo.toml");
@@ -27,20 +30,33 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     ))?;
 
     // check whether the crate is a library or binary
-    let root_file = if cargo_toml.lib.is_some() {
+    let (crate_name, to_root) = if let Some(lib) = cargo_toml.lib {
         if cargo_toml.bin.is_some() {
-            return Err(anyhow::anyhow!("Both lib and bin sections in Cargo.toml"));
+            return Err(anyhow::anyhow!(format!(
+                "Both lib and bin sections in: {}",
+                path.to_string_lossy()
+            )));
         }
-        "lib.rs"
-    } else if cargo_toml.bin.is_some() {
-        "main.rs"
+        (
+            lib.name.unwrap_or(cargo_toml.package.name),
+            lib.path.unwrap_or("src/lib.rs".to_string()),
+        )
+    } else if let Some(bin) = cargo_toml.bin {
+        (
+            bin.name.unwrap_or(cargo_toml.package.name),
+            bin.path.unwrap_or("src/main.rs".to_string()),
+        )
     } else {
-        return Err(anyhow::anyhow!("No lib or bin section in Cargo.toml"));
+        return Err(anyhow::anyhow!(format!(
+            "No lib or bin section in: {}",
+            path.to_string_lossy()
+        )));
     };
 
     let crate_ = Crate {
-        name: cargo_toml.package.name.clone(),
+        name: crate_name,
         version: cargo_toml.package.version.clone(),
+        docstring: "".to_string(),
     };
     let mut result_ = AnalysisResult {
         crates: vec![crate_.clone()],
@@ -50,36 +66,58 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     };
 
     // read the src/lib directory
-    let src = path.join("src").join(root_file);
-    if !src.exists() {
+    let root_file = path.join(to_root);
+    if !root_file.exists() {
         return Ok(result_);
     }
 
     // read the top-level module
-    let content = std::fs::read_to_string(src)?;
-    let (module, structs, enums) = Module::parse(&crate_.name, &content)?;
+    let content = std::fs::read_to_string(&root_file)?;
+    let (module, structs, enums) = Module::parse(&crate_.name, &content).context(format!(
+        "Error parsing module {}",
+        root_file.to_string_lossy()
+    ))?;
+    result_.crates.first_mut().unwrap().docstring = module.docstring.clone();
     let mut modules_to_read = module
         .declarations
         .iter()
-        .map(|s| (path.join("src"), s.to_string(), crate_.name.clone()))
+        .map(|s| {
+            (
+                root_file.parent().unwrap().to_path_buf(),
+                s.to_string(),
+                crate_.name.clone(),
+            )
+        })
         .collect::<Vec<_>>();
-    result_.modules.push(module);
     result_.structs.extend(structs);
     result_.enums.extend(enums);
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
-    while let Some((path, module_name, parent_path)) = modules_to_read.pop() {
-        // TODO also check for directory with mod.rs
-        let module_path = path.join(&module_name).with_extension("rs");
-        if !module_path.exists() || read_modules.contains(&module_path) {
+    while let Some((parent_dir, module_name, parent_ident)) = modules_to_read.pop() {
+        let (module_path, submodule_dir) =
+            if parent_dir.join(&module_name).with_extension("rs").exists() {
+                (
+                    parent_dir.join(&module_name).with_extension("rs"),
+                    parent_dir.join(&module_name),
+                )
+            } else if parent_dir.join(&module_name).join("mod.rs").exists() {
+                (
+                    parent_dir.join(&module_name).join("mod.rs"),
+                    parent_dir.to_path_buf(),
+                )
+            } else {
+                // TODO warn about missing module?
+                continue;
+            };
+
+        if read_modules.contains(&module_path) {
             continue;
         }
         read_modules.push(module_path.clone());
-        let sub_path = path.clone();
 
         let content = std::fs::read_to_string(&module_path)?;
-        let path_name = format!("{}::{}", parent_path, module_name);
+        let path_name = format!("{}::{}", parent_ident, module_name);
         let (module, structs, enums) = Module::parse(&path_name, &content).context(format!(
             "Error parsing module {}",
             module_path.to_string_lossy()
@@ -88,7 +126,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
             module
                 .declarations
                 .iter()
-                .map(|s| (sub_path.clone(), s.to_string(), path_name.clone()))
+                .map(|s| (submodule_dir.clone(), s.to_string(), path_name.clone()))
                 .collect::<Vec<_>>(),
         );
         result_.modules.push(module);
@@ -101,16 +139,17 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisResult {
-    crates: Vec<Crate>,
-    modules: Vec<Module>,
-    structs: Vec<Struct>,
-    enums: Vec<Enum>,
+    pub crates: Vec<Crate>,
+    pub modules: Vec<Module>,
+    pub structs: Vec<Struct>,
+    pub enums: Vec<Enum>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Crate {
-    name: String,
-    version: String,
+    pub name: String,
+    pub version: String,
+    pub docstring: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -127,10 +166,16 @@ struct Package {
 }
 
 #[derive(Debug, Deserialize)]
-struct Lib {}
+struct Lib {
+    name: Option<String>,
+    path: Option<String>,
+}
 
 #[derive(Debug, Deserialize)]
-struct Bin {}
+struct Bin {
+    name: Option<String>,
+    path: Option<String>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -183,7 +228,10 @@ mod tests {
         )?;
 
         // Create a dummy sub-module file
-        let dummy_module_path = temp_dir_path.join("src").join("my_submodule.rs");
+        let dummy_module_path = temp_dir_path
+            .join("src")
+            .join("my_module")
+            .join("my_submodule.rs");
         std::fs::create_dir_all(dummy_module_path.parent().unwrap())?;
         std::fs::write(
             &dummy_module_path,
@@ -204,11 +252,8 @@ mod tests {
         crates:
           - name: my_crate
             version: 0.1.0
-        modules:
-          - name: my_crate
             docstring: The crate docstring
-            declarations:
-              - my_module
+        modules:
           - name: "my_crate::my_module"
             docstring: The module docstring
             declarations:

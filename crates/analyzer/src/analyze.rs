@@ -6,9 +6,10 @@ pub mod module;
 pub mod struct_;
 pub mod type_;
 
-pub use self::enum_::Enum;
+pub use self::crate_::{analyze_crate, Crate};
+pub use self::enum_::{Enum, Variant};
 pub use self::module::Module;
-pub use self::struct_::Struct;
+pub use self::struct_::{Field, Struct};
 
 /// Extracts the docstring from an object's attributes
 ///

@@ -1,4 +1,8 @@
-Hallo
-=====
+Sphinx Rust
+===========
 
-.. rust:module:: analyzer::analyze::module
+Auto-document Rust code with Sphinx!
+
+.. toctree::
+
+    api

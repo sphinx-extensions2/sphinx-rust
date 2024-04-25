@@ -14,6 +14,5 @@ __all__ = ("__version__", "setup")
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
-    app.add_domain(RustDomain)
-
+    RustDomain.app_setup(app)
     return {"version": __version__, "parallel_read_safe": True}
