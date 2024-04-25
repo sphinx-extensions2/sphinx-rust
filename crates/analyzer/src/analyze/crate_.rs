@@ -4,21 +4,27 @@ use serde::{Deserialize, Serialize};
 
 use super::{Enum, Module, Struct};
 
-pub fn analyze_crate(path: &str) -> Result<Crate> {
+pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // check the path is a directory
     let path = std::path::Path::new(path);
     if !path.is_dir() {
         return Err(anyhow::anyhow!("Path is not a directory"));
     }
     // check if Cargo.toml exists
-    let cargo_toml = path.join("Cargo.toml");
-    if !cargo_toml.exists() {
-        return Err(anyhow::anyhow!("Cargo.toml does not exist in directory"));
+    let cargo_toml_path = path.join("Cargo.toml");
+    if !cargo_toml_path.exists() {
+        return Err(anyhow::anyhow!(format!(
+            "Cargo.toml does not exist in: {}",
+            path.to_string_lossy()
+        )));
     }
 
     // read the Cargo.toml and initialize the Crate struct
-    let contents = std::fs::read_to_string(cargo_toml)?;
-    let cargo_toml: CargoToml = toml::from_str(&contents)?;
+    let contents = std::fs::read_to_string(&cargo_toml_path)?;
+    let cargo_toml: CargoToml = toml::from_str(&contents).context(format!(
+        "Error parsing: {}",
+        cargo_toml_path.to_string_lossy()
+    ))?;
 
     // check whether the crate is a library or binary
     let root_file = if cargo_toml.lib.is_some() {
@@ -32,9 +38,12 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
         return Err(anyhow::anyhow!("No lib or bin section in Cargo.toml"));
     };
 
-    let mut crate_ = Crate {
-        name: cargo_toml.package.name,
-        version: cargo_toml.package.version,
+    let crate_ = Crate {
+        name: cargo_toml.package.name.clone(),
+        version: cargo_toml.package.version.clone(),
+    };
+    let mut result_ = AnalysisResult {
+        crates: vec![crate_.clone()],
         modules: vec![],
         structs: vec![],
         enums: vec![],
@@ -43,7 +52,7 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
     // read the src/lib directory
     let src = path.join("src").join(root_file);
     if !src.exists() {
-        return Ok(crate_);
+        return Ok(result_);
     }
 
     // read the top-level module
@@ -54,9 +63,9 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
         .iter()
         .map(|s| (path.join("src"), s.to_string(), crate_.name.clone()))
         .collect::<Vec<_>>();
-    crate_.modules.push(module);
-    crate_.structs.extend(structs);
-    crate_.enums.extend(enums);
+    result_.modules.push(module);
+    result_.structs.extend(structs);
+    result_.enums.extend(enums);
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
@@ -73,7 +82,7 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
         let path_name = format!("{}::{}", parent_path, module_name);
         let (module, structs, enums) = Module::parse(&path_name, &content).context(format!(
             "Error parsing module {}",
-            module_path.to_str().unwrap()
+            module_path.to_string_lossy()
         ))?;
         modules_to_read.extend(
             module
@@ -82,21 +91,26 @@ pub fn analyze_crate(path: &str) -> Result<Crate> {
                 .map(|s| (sub_path.clone(), s.to_string(), path_name.clone()))
                 .collect::<Vec<_>>(),
         );
-        crate_.modules.push(module);
-        crate_.structs.extend(structs);
-        crate_.enums.extend(enums);
+        result_.modules.push(module);
+        result_.structs.extend(structs);
+        result_.enums.extend(enums);
     }
 
-    Ok(crate_)
+    Ok(result_)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisResult {
+    crates: Vec<Crate>,
+    modules: Vec<Module>,
+    structs: Vec<Struct>,
+    enums: Vec<Enum>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Crate {
     name: String,
     version: String,
-    modules: Vec<Module>,
-    structs: Vec<Struct>,
-    enums: Vec<Enum>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -187,8 +201,9 @@ mod tests {
 
         assert_yaml_snapshot!(crate_, @r###"
         ---
-        name: my_crate
-        version: 0.1.0
+        crates:
+          - name: my_crate
+            version: 0.1.0
         modules:
           - name: my_crate
             docstring: The crate docstring

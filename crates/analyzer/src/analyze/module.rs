@@ -1,3 +1,4 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use syn::parse_file;
 
@@ -14,7 +15,7 @@ pub struct Module {
 
 impl Module {
     /// Extract the relevant information from the AST
-    pub fn parse(name: &str, content: &str) -> Result<(Self, Vec<Struct>, Vec<Enum>), syn::Error> {
+    pub fn parse(name: &str, content: &str) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
         let syntax = parse_file(content)?;
 
         let mut mod_ = Self {
