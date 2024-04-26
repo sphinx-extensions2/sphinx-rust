@@ -1,7 +1,7 @@
 Sphinx Rust
 ===========
 
-Auto-document Rust code with Sphinx!
+Auto-document Rust code with :external:doc:`Sphinx <index>`!
 
 .. warning::
 
@@ -15,7 +15,7 @@ This package is intended to bring API documentation for rust crates to Sphinx:
 
 - Auto-documentation of Rust crates: the documentation is generated to closely mirror the format of https://docs.rs
 
-- Integrates with sphinx cross-referencing system and inter-sphinx indexing
+- Integrates with sphinx cross-referencing system and :external:doc:`intersphinx <usage/extensions/intersphinx>` indexing
 
 - Supports writing docstrings for any valid Sphinx parser (reStructuredText, MyST markdown, etc.)
 
