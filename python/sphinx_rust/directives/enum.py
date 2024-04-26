@@ -25,14 +25,7 @@ class RustEnumAutoDirective(RustAutoDirective):
     """Directive to auto-document a Rust enum."""
 
     def run(self) -> list[nodes.Node]:
-        if not self.state_machine.match_titles:
-            # we are going to generate section nodes, and they will not work
-            # if e.g. the directive is called from inside a directive
-            LOGGER.warning(
-                f"{self.name!r} directive can only be used at the root of the document",
-                type="rust",
-                subtype="root",
-            )
+        if self.is_nested():
             return []
 
         qualifier = self.arguments[0]

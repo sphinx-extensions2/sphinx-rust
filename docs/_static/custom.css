@@ -1,4 +1,7 @@
 /* required for nice formatting with furo */
+.need_container {
+    overflow-y: scroll;
+}
 table.need {
     background-color: var(--color-code-background);
 }

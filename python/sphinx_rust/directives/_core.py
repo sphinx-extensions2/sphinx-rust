@@ -41,7 +41,24 @@ class RustAutoDirective(SphinxDirective):
     def cache_path(self) -> str:
         return str(self.env.rust_cache_path)  # type: ignore[attr-defined]
 
+    def is_nested(self, warn: bool = True) -> bool:
+        """Check if the directive is nested inside another directive.
+
+        If we are going to generate section nodes, then this is not allowed,
+        since it would break the documentation structure.
+        """
+        if warn and not self.state_machine.match_titles:
+            # we are going to generate section nodes, and they will not work
+            # if e.g. the directive is called from inside a directive
+            LOGGER.warning(
+                f"{self.name!r} directive can only be used at the root of the document",
+                type="rust",
+                subtype="root",
+            )
+        return self.state_machine.match_titles  # type: ignore[no-any-return]
+
     def create_section(self, title: str) -> nodes.section:
+        """Create a new section node."""
         section = nodes.section()
         self.set_source_info(section)
         section += nodes.title(text=title)
