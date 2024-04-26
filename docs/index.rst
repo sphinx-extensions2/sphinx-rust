@@ -81,4 +81,5 @@ Contents
 .. toctree::
     :caption: Development
 
-    design
+    dev/design
+    dev/contributing
