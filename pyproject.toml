@@ -23,7 +23,7 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
-  "License :: FREE FOR NON-COMMERCIAL USE",
+  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.8",
@@ -43,6 +43,7 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/useblocks/sphinx-rust"
+Documentation = "http://sphinx-rust.readthedocs.io"
 
 [project.optional-dependencies]
 dev = [
