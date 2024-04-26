@@ -22,15 +22,23 @@ We can then create requirements and test cases from Rust code:
 
 .. code-block:: restructuredtext
 
+    .. rubric:: Need-list example
+
     .. needlist::
         :tags: rust
+
+    .. rubric:: Need-table example
 
     .. needtable::
         :tags: rust
         :style: table
 
+.. rubric:: Need-list example
+
 .. needlist::
   :tags: rust
+
+.. rubric:: Need-table example
 
 .. needtable::
     :tags: rust
