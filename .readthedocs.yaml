@@ -1,5 +1,5 @@
 # https://docs.readthedocs.io/en/stable/config-file/v2.html#supported-settings
-# https://www.maturin.rs/sphinx#read-the-docs-integration 
+# https://www.maturin.rs/sphinx#read-the-docs-integration
 
 version: 2
 
