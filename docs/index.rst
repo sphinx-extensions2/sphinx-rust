@@ -56,9 +56,17 @@ Now you can use the `rust` cross-referencing roles to link to items in your Rust
 - :rust:struct:`analyzer::analyze::struct_::Struct`
 - :rust:enum:`analyzer::analyze::type_::TypeSegment`
 
---------------------
+Analysis CLI
+------------
 
-.. rubric:: Contents
+You can also use the `sphinx-rust` CLI to analyze Rust crates and generate a set of JSON files of the high-level API of the crate:
+
+.. code-block:: bash
+
+    python -m sphinx_rust.cli path/to/crate
+
+Contents
+--------
 
 .. toctree::
 

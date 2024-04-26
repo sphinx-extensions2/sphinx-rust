@@ -108,7 +108,7 @@ passenv = TERM
 ; Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
 allowlist_externals = bash
 commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
-commands = ipython {posargs}
+commands = {posargs:ipython}
 
 [testenv:docs]
 extras = docs
