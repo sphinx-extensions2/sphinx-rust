@@ -178,6 +178,7 @@ class RustDomain(Domain):
 def create_pages(srcdir: Path, result: AnalysisResult) -> None:
     """Create the pages for the analyzed crate."""
     # TODO don't write if not changed (but still remove outdated pages)
+    # TODO write or append to .gitignore?
     root = srcdir.joinpath("api", "crates", result.crate_)
     if root.exists():
         shutil.rmtree(root)
