@@ -19,7 +19,8 @@ This package is intended to bring API documentation for Rust crates to Sphinx:
 - Integrates with the Sphinx cross-referencing system and
   :external:doc:`intersphinx <usage/extensions/intersphinx>` indexing.
 
-- Supports writing docstrings for any valid Sphinx parser (reStructuredText, MyST markdown, ...)
+- Supports writing docstrings for any valid Sphinx parser
+  (reStructuredText, `MyST markdown <https://myst-parser.readthedocs.io>`__, ...)
 
 Installation
 ------------
