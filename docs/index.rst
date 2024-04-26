@@ -1,7 +1,7 @@
 Sphinx Rust
 ===========
 
-Auto-document Rust code with :external:doc:`Sphinx <index>`!
+Auto-document `Rust <https://www.rust-lang.org/>`__ code with :external:doc:`Sphinx <index>`!
 
 .. warning::
 
@@ -9,7 +9,7 @@ Auto-document Rust code with :external:doc:`Sphinx <index>`!
 
     It currently documents a subset of Rust code, and is not yet feature-complete, but this documents should give you a sense of what the final product will look like.
 
-This package is intended to bring API documentation for rust crates to Sphinx:
+This package is intended to bring API documentation for Rust crates to Sphinx:
 
 - Auto-analysis of Rust crates, with minimal steps required to get started
 
@@ -23,6 +23,9 @@ This package is intended to bring API documentation for rust crates to Sphinx:
 
 Installation
 ------------
+
+.. image:: https://img.shields.io/pypi/v/sphinx-rust
+    :target: https://pypi.org/project/sphinx-rust/
 
 .. code-block:: bash
 
