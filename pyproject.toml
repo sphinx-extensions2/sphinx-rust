@@ -51,7 +51,9 @@ dev = [
   "ipython"
 ]
 docs = [
-  "furo"
+  "furo",
+  "sphinx_needs",
+  "sphinxcontrib-plantuml"
 ]
 
 [tool.ruff.lint]

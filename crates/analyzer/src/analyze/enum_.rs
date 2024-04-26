@@ -7,6 +7,11 @@ use super::{docstring_from_attrs, struct_::Field};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Representation of a Enum
+///
+/// .. req:: Represent an enum
+///     :id: RUST003
+///     :tags: rust
+///     :status: in-progress
 pub struct Enum {
     /// The name of the enum
     pub name: String,

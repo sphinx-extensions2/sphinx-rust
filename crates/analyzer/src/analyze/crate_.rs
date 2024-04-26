@@ -148,6 +148,11 @@ pub struct AnalysisResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Representation of a crate
+///
+/// .. req:: Represent a crate
+///     :id: RUST006
+///     :tags: rust
+///     :status: in-progress
 pub struct Crate {
     pub name: String,
     pub version: String,

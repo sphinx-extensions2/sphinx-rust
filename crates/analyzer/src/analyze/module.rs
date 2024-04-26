@@ -7,6 +7,11 @@ use super::{docstring_from_attrs, enum_::Enum, struct_::Struct};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Representation of a module
+///
+/// .. req:: Represent a module
+///     :id: RUST005
+///     :tags: rust
+///     :status: in-progress
 pub struct Module {
     pub name: String,
     pub docstring: String,
