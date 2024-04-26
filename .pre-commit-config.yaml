@@ -36,14 +36,14 @@ repos:
     name: cargo check
     description: Check cargo packages for errors.
     entry: cargo check
-    language: system
+    language: rust
     types: [rust]
     pass_filenames: false
   - id: cargo-clippy
     name: cargo clippy
     description: Lint rust sources
     entry: cargo clippy
-    language: system
+    language: rust
     args: ["--fix", "--allow-staged", "--allow-dirty", "--", "-D", "warnings"]
     types: [rust]
     pass_filenames: false
