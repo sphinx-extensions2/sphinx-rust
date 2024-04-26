@@ -121,6 +121,16 @@ pub struct AnalysisResult {
     pub enums: Vec<String>,
 }
 
+#[pymethods]
+impl AnalysisResult {
+    pub fn __repr__(&self) -> String {
+        format!(
+            "AnalysisResult(crate={:?},\n  modules={:?},\n  structs={:?},\n  enums={:?}\n)",
+            self.crate_, self.modules, self.structs, self.enums
+        )
+    }
+}
+
 /// Serialize a value to a file.
 /// The file is only written if the value is different from any existing value.
 fn serialize_to_file<T>(path: &std::path::Path, value: &T) -> PyResult<()>
