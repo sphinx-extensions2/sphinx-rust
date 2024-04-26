@@ -488,6 +488,9 @@ pub struct Variant {
     pub name: String,
     #[pyo3(get)]
     pub docstring: String,
+    // TODO discriminant
+    #[pyo3(get)]
+    pub fields: Vec<Field>,
 }
 
 #[pymethods]
@@ -502,6 +505,7 @@ impl From<analyze::Variant> for Variant {
         Variant {
             name: var.name,
             docstring: var.docstring,
+            fields: var.fields.into_iter().map(Field::from).collect(),
         }
     }
 }

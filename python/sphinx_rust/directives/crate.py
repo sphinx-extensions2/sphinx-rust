@@ -9,10 +9,12 @@ from ._core import (
     RustAutoDirective,
     create_field_list,
     create_summary_table,
+    create_xref,
     parse_docstring,
 )
 
 if TYPE_CHECKING:
+    from sphinx_rust.domain import ObjType
     from sphinx_rust.sphinx_rust import Enum, Module, Struct
 
 LOGGER = getLogger(__name__)
@@ -61,23 +63,29 @@ class RustCrateAutoDirective(RustAutoDirective):
             root += parse_docstring(self.env, self.doc, crate.docstring)
 
         items: list[Module | Struct | Enum]
-        for name, items in [  # type: ignore[assignment]
-            ("Modules", load_modules(self.cache_path, qualifier + "::")),
-            ("Structs", load_structs(self.cache_path, qualifier + "::")),
-            ("Enums", load_enums(self.cache_path, qualifier + "::")),
+        objtype: ObjType
+        for name, objtype, items in [  # type: ignore[assignment]
+            ("Modules", "module", load_modules(self.cache_path, qualifier + "::")),
+            ("Structs", "struct", load_structs(self.cache_path, qualifier + "::")),
+            ("Enums", "enum", load_enums(self.cache_path, qualifier + "::")),
         ]:
             if items:
                 section = self.create_section(name)
                 root += section
                 rows = [
                     (
-                        # TODO should be references not just text
-                        [nodes.Text(item.name)],
+                        [
+                            nodes.paragraph(
+                                "",
+                                "",
+                                create_xref(self.env.docname, item.name, objtype),
+                            )
+                        ],
                         parse_docstring(
                             self.env,
                             self.doc,
                             # TODO the first line should only be a paragraph
-                            item.docstring.splitlines()[0] if item.docstring else "\-",
+                            item.docstring.splitlines()[0] if item.docstring else r"\-",
                         ),
                     )
                     for item in sorted(items, key=lambda m: m.name)

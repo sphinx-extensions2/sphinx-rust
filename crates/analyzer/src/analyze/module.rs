@@ -1,3 +1,4 @@
+//! Analyze modules
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use syn::parse_file;

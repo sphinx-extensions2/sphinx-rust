@@ -1,3 +1,4 @@
+//! Analyze enums
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use syn::ItemEnum;

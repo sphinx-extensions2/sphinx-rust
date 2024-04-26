@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING
 
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.util.logging import getLogger
+from sphinx.util.nodes import make_id
 
 from sphinx_rust.sphinx_rust import load_struct
 
@@ -54,7 +56,18 @@ class RustStructAutoDirective(RustAutoDirective):
 
         root = nodes.Element()
 
-        # TODO signature block
+        desc = addnodes.desc()
+        root += desc
+        signature = addnodes.desc_signature(
+            struct.name, f'pub struct {struct.name.split("::")[-1]} {{}}'
+        )
+        desc += signature
+        # TODO add fields to signature
+        # desc += addnodes.desc_content("", nodes.paragraph("", ))
+        node_id = make_id(self.env, self.doc, "", struct.name)
+        signature["ids"].append(node_id)
+        self.doc.note_explicit_target(signature)
+        self.rust_domain.note_object(struct.name, "struct", node_id, signature)
 
         if struct.docstring:
             root += parse_docstring(self.env, self.doc, struct.docstring)

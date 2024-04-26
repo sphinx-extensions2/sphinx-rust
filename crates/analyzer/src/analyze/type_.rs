@@ -1,7 +1,11 @@
+//! Analyze types
 use quote::quote;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// A segment of a type signature
+///
+/// Types are split into segments to allow for identification of referenceable elements
 pub enum TypeSegment {
     String(String),
     Path(String),

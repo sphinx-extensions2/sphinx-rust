@@ -1,11 +1,14 @@
 from typing import TYPE_CHECKING
 
 from docutils import nodes, utils
+from sphinx import addnodes
 from sphinx.util.docutils import LoggingReporter, SphinxDirective
 from sphinx.util.logging import getLogger
 
 if TYPE_CHECKING:
     from sphinx.environment import BuildEnvironment
+
+    from sphinx_rust.domain import ObjType, RustDomain
 
 
 LOGGER = getLogger(__name__)
@@ -23,6 +26,13 @@ class RustAutoDirective(SphinxDirective):
     @property
     def doc(self) -> nodes.document:
         return self.state.document  # type: ignore[no-any-return]
+
+    @property
+    def rust_domain(self) -> "RustDomain":
+        # avoid circular import
+        from sphinx_rust.domain import RustDomain  # noqa: PLC0415
+
+        return self.env.domains[RustDomain.name]  # type: ignore[return-value]
 
     @property
     def cache_path(self) -> str:
@@ -92,3 +102,22 @@ def parse_docstring(
     # TODO merge document metadata with parent document, e.g. targets etc?
     # or docutils.Include actually runs the transforms on the included document, before returning its children
     return document.children
+
+
+def create_xref(
+    docname: str, ident: str, objtype: "ObjType", *, warn_dangling: bool = False
+) -> addnodes.pending_xref:
+    """Create a cross-reference node."""
+    options = {
+        "refdoc": docname,
+        "refdomain": "rust",
+        "reftype": objtype,
+        "refexplicit": True,
+        "refwarn": warn_dangling,
+        "reftarget": ident,
+    }
+    ref = addnodes.pending_xref(ident, **options)
+    name = ident.split("::")[-1]
+    ref += nodes.literal(name, name)
+
+    return ref

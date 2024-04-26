@@ -138,6 +138,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Result from a crate analysis
 pub struct AnalysisResult {
     pub crate_: Crate,
     pub modules: Vec<Module>,
@@ -146,6 +147,7 @@ pub struct AnalysisResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Representation of a crate
 pub struct Crate {
     pub name: String,
     pub version: String,

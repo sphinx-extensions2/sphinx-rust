@@ -119,6 +119,7 @@ class Variant:
     name: str
     """The  name of the enum variant."""
     docstring: str
+    fields: list[Field]
 
 class Enum:
     """Representation of an enum."""

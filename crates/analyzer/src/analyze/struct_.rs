@@ -1,3 +1,4 @@
+//! Analyze structs
 use serde::{Deserialize, Serialize};
 use syn::{ItemStruct, Visibility};
 
