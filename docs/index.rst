@@ -13,11 +13,13 @@ This package is intended to bring API documentation for rust crates to Sphinx:
 
 - Auto-analysis of Rust crates, with minimal steps required to get started
 
-- Auto-documentation of Rust crates: the documentation is generated to closely mirror the format of https://docs.rs
+- Cleanly documented APIs;
+  the documentation is generated to closely mirror the format of https://docs.rs
 
-- Integrates with sphinx cross-referencing system and :external:doc:`intersphinx <usage/extensions/intersphinx>` indexing
+- Integrates with the Sphinx cross-referencing system and
+  :external:doc:`intersphinx <usage/extensions/intersphinx>` indexing.
 
-- Supports writing docstrings for any valid Sphinx parser (reStructuredText, MyST markdown, etc.)
+- Supports writing docstrings for any valid Sphinx parser (reStructuredText, MyST markdown, ...)
 
 Installation
 ------------
