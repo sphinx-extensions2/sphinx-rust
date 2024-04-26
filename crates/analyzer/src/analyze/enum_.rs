@@ -104,9 +104,7 @@ mod tests {
               - name: ~
                 docstring: ""
                 type_:
-                  Path:
-                    - ident: u8
-                      arguments: None
+                  - Path: u8
           - name: MyVariant3
             docstring: variant with named fields
             discriminant: ~
@@ -114,9 +112,7 @@ mod tests {
               - name: field
                 docstring: field docstring
                 type_:
-                  Path:
-                    - ident: u8
-                      arguments: None
+                  - Path: u8
         "###);
     }
 }

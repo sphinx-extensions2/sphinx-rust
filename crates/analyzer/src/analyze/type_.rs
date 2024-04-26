@@ -2,184 +2,144 @@ use quote::quote;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Argument {
-    /// A lifetime argument.
-    Lifetime(String),
-    /// A type argument.
-    Type(Type),
-    /// A const expression.
-    Const(String),
-    /// A binding (equality constraint) on an associated type: the `Item =
-    /// u8` in `Iterator<Item = u8>`.
-    AssocType(String), // TODO should be expanded
-    /// An equality constraint on an associated constant: the `PANIC =
-    /// false` in `Trait<PANIC = false>`.
-    AssocConst(String), // TODO should be expanded
-    /// An associated type bound: `Iterator<Item: Display>`.
-    Constraint(String), // TODO should be expanded
-    Unknown(String),
+pub enum TypeSegment {
+    String(String),
+    Path(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum PathArguments {
-    None,
-    /// The `<'a, T>` in `std::slice::iter<'a, T>`.
-    AngleBracketed(Vec<Argument>),
-    /// The `(A, B) -> C` in `Fn(A, B) -> C`.
-    Parenthesized(String), // TODO should be expanded
+impl From<&str> for TypeSegment {
+    fn from(s: &str) -> Self {
+        TypeSegment::String(
+            s.replace(" :: ", "::")
+                .replace(" < ", "<")
+                .replace(" >", ">"),
+        ) // TODO this is a hack for now
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PathSegment {
-    pub ident: String,
-    arguments: PathArguments,
+impl From<String> for TypeSegment {
+    fn from(s: String) -> Self {
+        TypeSegment::String(
+            s.replace(" :: ", "::")
+                .replace(" < ", "<")
+                .replace(" >", ">"),
+        ) // TODO this is a hack for now
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TraitBound {
-    /// A trait used as a bound on a type parameter.
-    /// (Path, if has &)
-    // TODO modifier, lifetimes
-    Trait((Vec<PathSegment>, bool)),
-    Lifetime(String),
-    Verbatim(String),
+/// Converts a syn type to a list of text and Paths
+pub(super) fn convert_type(ty: &syn::Type) -> Vec<TypeSegment> {
+    let mut v = convert_type_inner(ty);
+    // Merge adjacent strings
+    v = v.iter().fold(Vec::new(), |mut acc, elem| {
+        if let Some(TypeSegment::String(s)) = acc.last_mut() {
+            if let TypeSegment::String(next) = elem {
+                s.push_str(next);
+                return acc;
+            }
+        }
+        acc.push(elem.clone());
+        acc
+    });
+    v
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Type {
-    /// A fixed size array type: ``[T; n]``.
-    Array((Box<Type>, String)),
-    /// Indication that a type should be inferred by the compiler: _.
-    Infer,
-    /// The never type: !.
-    Never,
-    /// A type contained within invisible delimiters.
-    Group(Box<Type>),
-    /// An ``impl Bound1 + Bound2 + Bound3`` type where Bound is a trait or a lifetime.
-    ImplTrait(Vec<TraitBound>),
-    /// A parenthesized type equivalent to the inner type.
-    Paren(Box<Type>),
-    /// A path like ``std::slice::Iter``,
-    /// optionally qualified with a self-type as in <Vec<T> as ``SomeTrait>::Associated``.
-    Path(Vec<PathSegment>),
-    /// A raw pointer type: ``*const T`` or ``*mut T``.
-    /// ``(type, const, mut)``.
-    Ptr((Box<Type>, bool, bool)),
-    /// A reference type: ``&'a T`` or ``&'a mut T``.
-    /// ``(type, lifetime, mutability)``.
-    Reference((Box<Type>, String, bool)),
-    /// Slice type: ``[T]``.
-    Slice(Box<Type>),
-    /// A trait object type ``dyn Bound1 + Bound2 + Bound3`` where Bound is a trait or a lifetime.
-    Trait(Vec<TraitBound>),
-    /// A tuple type: ``(T, U, ..)``.
-    Tuple(Vec<Type>),
-    /// Tokens in type position not interpreted by Syn.
-    Unknown(String),
-}
-
-fn syn_path_to_path(path: &syn::Path) -> Vec<PathSegment> {
-    path.segments
-        .iter()
-        .map(|segment| PathSegment {
-            ident: segment.ident.to_string(),
-            arguments: match &segment.arguments {
-                syn::PathArguments::None => PathArguments::None,
-                syn::PathArguments::AngleBracketed(ab) => PathArguments::AngleBracketed(
-                    ab.args
-                        .iter()
-                        .map(|arg| match arg {
-                            syn::GenericArgument::Lifetime(lifetime) => {
-                                Argument::Lifetime(lifetime.ident.to_string())
-                            }
-                            syn::GenericArgument::Type(ty) => Argument::Type(ty_to_type(ty)),
-                            syn::GenericArgument::Const(expr) => {
-                                Argument::Const(quote! { #expr }.to_string())
-                            }
-                            syn::GenericArgument::AssocType(binding) => {
-                                Argument::AssocType(quote! { #binding }.to_string())
-                            }
-                            syn::GenericArgument::AssocConst(binding) => {
-                                Argument::AssocType(quote! { #binding }.to_string())
-                            }
-                            syn::GenericArgument::Constraint(constraint) => {
-                                Argument::Constraint(quote! { #constraint }.to_string())
-                            }
-                            _ => Argument::Unknown(quote! { #arg }.to_string()),
-                        })
-                        .collect(),
-                ),
-                syn::PathArguments::Parenthesized(paren) => {
-                    PathArguments::Parenthesized(quote! { #paren }.to_string())
-                }
-            },
-        })
-        .collect()
-}
-
-pub(super) fn ty_to_type(ty: &syn::Type) -> Type {
+fn convert_type_inner(ty: &syn::Type) -> Vec<TypeSegment> {
     match ty {
         syn::Type::Array(array) => {
+            let mut v = vec!["[".into()];
+            v.extend(convert_type(&array.elem));
+            v.push("; ".into());
             let len = &array.len;
-            Type::Array((
-                Box::new(ty_to_type(&array.elem)),
-                quote! { #len }.to_string(),
-            ))
+            v.push(quote! { #len }.to_string().into());
+            v.push("]".into());
+            v
         }
-        syn::Type::BareFn(_) => unimplemented!(), // TODO bare function type
-        syn::Type::Group(group) => Type::Group(Box::new(ty_to_type(&group.elem))),
-        syn::Type::ImplTrait(imp) => Type::ImplTrait(
-            imp.bounds
-                .iter()
-                .map(|bound| match &bound {
-                    syn::TypeParamBound::Trait(trait_) => TraitBound::Trait((
-                        syn_path_to_path(&trait_.path),
-                        trait_.paren_token.is_some(),
-                    )),
-                    syn::TypeParamBound::Lifetime(lifetime) => {
-                        TraitBound::Lifetime(lifetime.ident.to_string())
-                    }
-                    _ => TraitBound::Verbatim(quote! { #bound }.to_string()),
-                })
-                .collect(),
-        ),
-        syn::Type::Infer(_) => Type::Infer,
-        syn::Type::Macro(_) => unimplemented!(), // TODO macro type
-        syn::Type::Never(_) => Type::Never,
-        syn::Type::Paren(paren) => Type::Paren(Box::new(ty_to_type(&paren.elem))),
-        syn::Type::Path(path) => Type::Path(syn_path_to_path(&path.path)),
-        syn::Type::Ptr(ptr) => Type::Ptr((
-            Box::new(ty_to_type(&ptr.elem)),
-            ptr.const_token.is_some(),
-            ptr.mutability.is_some(),
-        )),
-        syn::Type::Reference(ref_) => Type::Reference((
-            Box::new(ty_to_type(&ref_.elem)),
-            ref_.lifetime
-                .as_ref()
-                .map_or_else(|| "".to_string(), |lifetime| lifetime.ident.to_string()),
-            ref_.mutability.is_some(),
-        )),
-        syn::Type::Slice(slice) => Type::Slice(Box::new(ty_to_type(&slice.elem))),
-        syn::Type::TraitObject(trait_) => Type::Trait(
-            trait_
-                .bounds
-                .iter()
-                .map(|bound| match &bound {
-                    syn::TypeParamBound::Trait(trait_) => TraitBound::Trait((
-                        syn_path_to_path(&trait_.path),
-                        trait_.paren_token.is_some(),
-                    )),
-                    syn::TypeParamBound::Lifetime(lifetime) => {
-                        TraitBound::Lifetime(lifetime.ident.to_string())
-                    }
-                    _ => TraitBound::Verbatim(quote! { #bound }.to_string()),
-                })
-                .collect(),
-        ),
-        syn::Type::Tuple(tuple) => Type::Tuple(tuple.elems.iter().map(ty_to_type).collect()),
-        syn::Type::Verbatim(verb) => Type::Unknown(quote! { #verb }.to_string()),
-        _ => Type::Unknown(quote! { #ty }.to_string()),
+        syn::Type::BareFn(func) => vec![quote! { #func }.to_string().into()], // TODO this needs to be expanded
+        syn::Type::Group(group) => convert_type(&group.elem),
+        syn::Type::ImplTrait(imp) => {
+            let mut v = vec!["impl ".into()];
+            for (i, elem) in imp.bounds.iter().enumerate() {
+                if i > 0 {
+                    v.push(" + ".into());
+                }
+                v.push(quote! { #elem }.to_string().into()); // TODO this needs to be expanded to capture traits
+            }
+            v
+        }
+        syn::Type::Infer(_) => vec!["_".into()],
+        syn::Type::Macro(mac) => vec![quote! { #mac }.to_string().into()],
+        syn::Type::Never(_) => vec!["!".into()],
+        syn::Type::Paren(paren) => {
+            let mut v = vec!["(".into()];
+            v.extend(convert_type(&paren.elem));
+            v.push(")".into());
+            v
+        }
+        syn::Type::Path(path) => {
+            // TODO this is wrong, it puts spaces between the path segments
+            vec![TypeSegment::Path(
+                quote! { #path }
+                    .to_string()
+                    .replace(" :: ", "::")
+                    .replace(" < ", "<")
+                    .replace(" >", ">"),
+            )]
+        }
+        syn::Type::Ptr(ptr) => {
+            let mut v = vec![];
+            if ptr.const_token.is_some() {
+                v.push("*const ".into());
+            } else if ptr.mutability.is_some() {
+                v.push("*mut ".into());
+            } else {
+                v.push("*".into());
+            }
+            v.extend(convert_type(&ptr.elem));
+            v
+        }
+        syn::Type::Reference(ref_) => {
+            let mut v = vec!["&".into()];
+            if let Some(lifetime) = &ref_.lifetime {
+                v.push(lifetime.ident.to_string().into());
+            }
+            if ref_.mutability.is_some() {
+                v.push(" mut ".into());
+            } else {
+                v.push(" ".into());
+            }
+            v.extend(convert_type(&ref_.elem));
+            v
+        }
+        syn::Type::Slice(slice) => {
+            let mut v = vec!["[".into()];
+            v.extend(convert_type(&slice.elem));
+            v.push("]".into());
+            v
+        }
+        syn::Type::TraitObject(trait_) => {
+            let mut v = vec!["dyn ".into()];
+            for (i, elem) in trait_.bounds.iter().enumerate() {
+                if i > 0 {
+                    v.push(" + ".into());
+                }
+                v.push(quote! { #elem }.to_string().into()); // TODO this needs to be expanded to capture traits
+            }
+            v
+        }
+        syn::Type::Tuple(tuple) => {
+            let mut v = vec!["(".into()];
+            for (i, elem) in tuple.elems.iter().enumerate() {
+                if i > 0 {
+                    v.push(", ".into());
+                }
+                v.extend(convert_type(elem));
+            }
+            v.push(")".into());
+            v
+        }
+        syn::Type::Verbatim(verb) => vec![quote! { #verb }.to_string().into()],
+        _ => vec![quote! { #ty }.to_string().into()],
     }
 }
 
@@ -191,172 +151,122 @@ mod tests {
     #[test]
     fn ty_to_type_array() {
         let ty = syn::parse_quote! { [u8; 10] };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Array:
-          - Path:
-              - ident: u8
-                arguments: None
-          - "10"
+        - String: "["
+        - Path: u8
+        - String: "; 10]"
         "###);
     }
 
     #[test]
     fn ty_to_type_infer() {
         let ty = syn::parse_quote! { _ };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Infer
+        - String: _
         "###);
     }
 
     #[test]
     fn ty_to_type_impl_trait() {
         let ty = syn::parse_quote! { impl Bound1 + Bound2 + Bound3 };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        ImplTrait:
-          - Trait:
-              - - ident: Bound1
-                  arguments: None
-              - false
-          - Trait:
-              - - ident: Bound2
-                  arguments: None
-              - false
-          - Trait:
-              - - ident: Bound3
-                  arguments: None
-              - false
+        - String: impl Bound1 + Bound2 + Bound3
         "###);
     }
 
     #[test]
     fn ty_to_type_never() {
         let ty = syn::parse_quote! { ! };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Never
+        - String: "!"
         "###);
     }
 
     #[test]
     fn ty_to_type_paren() {
         let ty = syn::parse_quote! { (u8) };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Paren:
-          Path:
-            - ident: u8
-              arguments: None
+        - String: (
+        - Path: u8
+        - String: )
         "###);
     }
 
     #[test]
     fn ty_to_type_path() {
         let ty = syn::parse_quote! { std::collections::HashMap<u8, u16> };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Path:
-          - ident: std
-            arguments: None
-          - ident: collections
-            arguments: None
-          - ident: HashMap
-            arguments:
-              AngleBracketed:
-                - Type:
-                    Path:
-                      - ident: u8
-                        arguments: None
-                - Type:
-                    Path:
-                      - ident: u16
-                        arguments: None
+        - Path: "std :: collections :: HashMap < u8 , u16 >"
         "###);
     }
 
     #[test]
     fn ty_to_type_ptr() {
         let ty = syn::parse_quote! { *const u8 };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Ptr:
-          - Path:
-              - ident: u8
-                arguments: None
-          - true
-          - false
+        - String: "*const "
+        - Path: u8
         "###);
     }
 
     #[test]
     fn ty_to_type_ref() {
         let ty = syn::parse_quote! { &'a mut u8 };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Reference:
-          - Path:
-              - ident: u8
-                arguments: None
-          - a
-          - true
+        - String: "&a mut "
+        - Path: u8
         "###);
     }
 
     #[test]
     fn ty_to_type_slice() {
         let ty = syn::parse_quote! { [u8] };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Slice:
-          Path:
-            - ident: u8
-              arguments: None
+        - String: "["
+        - Path: u8
+        - String: "]"
         "###);
     }
 
     #[test]
     fn ty_to_type_trait() {
         let ty = syn::parse_quote! { dyn std::fmt::Debug + 'a };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Trait:
-          - Trait:
-              - - ident: std
-                  arguments: None
-                - ident: fmt
-                  arguments: None
-                - ident: Debug
-                  arguments: None
-              - false
-          - Lifetime: a
+        - String: "dyn std::fmt::Debug + 'a"
         "###);
     }
 
     #[test]
     fn ty_to_type_tuple() {
         let ty = syn::parse_quote! { (u8, u16) };
-        let result = ty_to_type(&ty);
+        let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        Tuple:
-          - Path:
-              - ident: u8
-                arguments: None
-          - Path:
-              - ident: u16
-                arguments: None
+        - String: (
+        - Path: u8
+        - String: ", "
+        - Path: u16
+        - String: )
         "###);
     }
 }

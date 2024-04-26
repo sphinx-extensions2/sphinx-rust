@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __version__: str
 
-def analyze_crate(crate_path: str, cache_path: str) -> None:
+def analyze_crate(crate_path: str, cache_path: str) -> AnalysisResult:
     """Analyse a crate and cache the results to disk.
 
     :param crate_path: The path to the crate to analyse.
@@ -66,6 +66,14 @@ def load_enums(cache_path: str, prefix: str) -> list[Enum]:
     :raises IOError: If the load fails.
     """
 
+class AnalysisResult:
+    """Representation of the result of an analysis."""
+
+    crate_: str
+    modules: list[str]
+    structs: list[str]
+    enums: list[str]
+
 class Crate:
     """Representation of a crate."""
 
@@ -80,12 +88,22 @@ class Module:
     """The fully qualified name of the module, e.g. ``crate::module``."""
     docstring: str
 
+class TypeSegment:
+    """Representation of a segment of a type.
+
+    Types are split into segments to allow for identification of referenceable elements
+    """
+
+    content: str
+    is_path: bool
+
 class Field:
     """Representation of a struct field."""
 
     name: str
     """The fully qualified name of the field."""
     docstring: str
+    type_: list[TypeSegment]
 
 class Struct:
     """Representation of a struct."""

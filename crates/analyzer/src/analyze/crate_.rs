@@ -59,7 +59,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         docstring: "".to_string(),
     };
     let mut result_ = AnalysisResult {
-        crates: vec![crate_.clone()],
+        crate_: crate_.clone(),
         modules: vec![],
         structs: vec![],
         enums: vec![],
@@ -77,7 +77,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         "Error parsing module {}",
         root_file.to_string_lossy()
     ))?;
-    result_.crates.first_mut().unwrap().docstring = module.docstring.clone();
+    result_.crate_.docstring = module.docstring.clone();
     let mut modules_to_read = module
         .declarations
         .iter()
@@ -139,7 +139,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisResult {
-    pub crates: Vec<Crate>,
+    pub crate_: Crate,
     pub modules: Vec<Module>,
     pub structs: Vec<Struct>,
     pub enums: Vec<Enum>,

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import TYPE_CHECKING, Any
 
 from sphinx.domains import Domain
+from sphinx.util.logging import getLogger
 
-from sphinx_rust.directives import RustCrateDirective
+from sphinx_rust.directives.crate import RustCrateAutoDirective
+from sphinx_rust.directives.enum import RustEnumAutoDirective
+from sphinx_rust.directives.module import RustModuleAutoDirective
+from sphinx_rust.directives.struct import RustStructAutoDirective
 from sphinx_rust.sphinx_rust import analyze_crate
-
-# from sphinx.directives import ObjectDescription
-# from sphinx.domains import Domain, ObjType
-# from sphinx.roles import XRefRole
-
 
 if TYPE_CHECKING:
     from docutils.nodes import Element
@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     from sphinx.environment import BuildEnvironment
 
 
+LOGGER = getLogger(__name__)
+
+
 class RustDomain(Domain):
     """Rust domain."""
 
@@ -28,7 +31,10 @@ class RustDomain(Domain):
     label = "Rust"
 
     directives = {
-        "crate": RustCrateDirective,
+        "crate": RustCrateAutoDirective,
+        "module": RustModuleAutoDirective,
+        "struct": RustStructAutoDirective,
+        "enum": RustEnumAutoDirective,
     }
 
     @classmethod
@@ -39,14 +45,61 @@ class RustDomain(Domain):
 
     @staticmethod
     def on_builder_inited(app: Sphinx) -> None:
+        """Analyze the Rust crates."""
         # create the cache directory
         app.env.rust_cache_path = cache = Path(str(app.outdir)) / "rust_cache"  # type: ignore[attr-defined]
         cache.mkdir(exist_ok=True)
-        # analyze the crates
+        srcdir = Path(
+            str(app.srcdir)
+        )  # for back-compatibility, assume it might not be a Path
         for crate in app.config.rust_crates:
             path = Path(str(app.srcdir)) / str(crate)
-            # TODO log info, handle errors
-            analyze_crate(str(path), str(cache))
+            # analyze the crate
+            LOGGER.info(f"[rust] Analyzing crate: {path.resolve()!s}")
+            try:
+                result = analyze_crate(str(path), str(cache))
+            except OSError as e:
+                LOGGER.warning(
+                    f"Error analyzing crate: {e!s}", type="rust", subtype="analyze"
+                )
+            # now write the pages
+            # TODO don't write if not changed
+            root = srcdir.joinpath("api", "crates", result.crate_)
+            if root.exists():
+                shutil.rmtree(root)
+            items = root.joinpath("items")
+            items.mkdir(parents=True, exist_ok=True)
+            pages = []
+            for module in result.modules:
+                module_title = "::".join(module.split("::")[1:])
+                pages.append(module_title)
+                title = f"Module ``{module_title}``"
+                items.joinpath(f"{module_title}.rst").write_text(
+                    f"{title}\n{'=' * len(title)}\n\n.. rust:module:: {module}\n"
+                )
+            for struct in result.structs:
+                struct_title = "::".join(struct.split("::")[1:])
+                pages.append(struct_title)
+                title = f"Struct ``{struct_title}``"
+                items.joinpath(f"{struct_title}.rst").write_text(
+                    f"{title}\n{'=' * len(title)}\n\n.. rust:struct:: {struct}\n"
+                )
+            for enum in result.enums:
+                enum_title = "::".join(enum.split("::")[1:])
+                pages.append(enum_title)
+                title = f"Enum ``{enum_title}``"
+                items.joinpath(f"{enum_title}.rst").write_text(
+                    f"{title}\n{'=' * len(title)}\n\n.. rust:enum:: {enum}\n"
+                )
+            title = f"Crate ``{result.crate_}``"
+            index_content = (
+                f"{title}\n{'=' * len(title)}\n\n.. rust:crate:: {result.crate_}"
+            )
+            if pages:
+                index_content += "\n\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n"
+                for page in pages:
+                    index_content += f"    items/{page}\n"
+            root.joinpath("index.rst").write_text(index_content)
 
     def merge_domaindata(
         self, _docnames: list[str], _otherdata: dict[str, Any]
@@ -63,51 +116,3 @@ class RustDomain(Domain):
         _contnode: Element,
     ) -> list[tuple[str, Element]]:
         return []
-
-
-# class RustModuleDirective(ObjectDescription[str]):
-#     """Directive to document a Rust module."""
-
-#     def handle_signature(self, sig: str, signode: desc_signature) -> str:
-#         return sig
-
-#     def add_target_and_index(
-#         self, name: str, sig: str, signode: desc_signature
-#     ) -> None:
-#         pass
-
-
-# class RustStructDirective(ObjectDescription[str]):
-#     """Directive to document a Rust struct."""
-
-#     def handle_signature(self, sig: str, signode: desc_signature) -> str:
-#         return sig
-
-#     def add_target_and_index(
-#         self, name: str, sig: str, signode: desc_signature
-#     ) -> None:
-#         pass
-
-
-# class RustFieldDirective(ObjectDescription[str]):
-#     """Directive to document a Rust struct field."""
-
-#     def handle_signature(self, sig: str, signode: desc_signature) -> str:
-#         return sig
-
-#     def add_target_and_index(
-#         self, name: str, sig: str, signode: desc_signature
-#     ) -> None:
-#         pass
-
-
-# class RustModuleRole(XRefRole):
-#     """Role to cross-reference a Rust module."""
-
-
-# class RustStructRole(XRefRole):
-#     """Role to cross-reference a Rust struct."""
-
-
-# class RustFieldRole(XRefRole):
-#     """Role to cross-reference a Rust struct field."""

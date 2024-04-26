@@ -3,7 +3,7 @@ use syn::{ItemStruct, Visibility};
 
 use super::{
     docstring_from_attrs,
-    type_::{ty_to_type, Type},
+    type_::{convert_type, TypeSegment},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +23,7 @@ pub struct Field {
     pub name: Option<String>,
     /// The docstring of the field
     pub docstring: String,
-    pub type_: Type,
+    pub type_: Vec<TypeSegment>,
 }
 
 impl Struct {
@@ -50,7 +50,7 @@ impl Field {
     pub fn parse(ast: &syn::Field) -> Self {
         let name = ast.ident.as_ref().map(|name| name.to_string());
         let docstring = docstring_from_attrs(&ast.attrs);
-        let type_ = ty_to_type(&ast.ty);
+        let type_ = convert_type(&ast.ty);
         Self {
             name,
             docstring,
@@ -102,11 +102,9 @@ mod tests {
           - name: my_field
             docstring: Docstring
             type_:
-              Array:
-                - Path:
-                    - ident: T
-                      arguments: None
-                - "1"
+              - String: "["
+              - Path: T
+              - String: "; 1]"
         "###);
     }
 }

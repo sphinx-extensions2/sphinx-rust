@@ -17,8 +17,10 @@ fn sphinx_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Module>()?;
     m.add_class::<Struct>()?;
     m.add_class::<Field>()?;
+    m.add_class::<TypeSegment>()?;
     m.add_class::<Enum>()?;
     m.add_class::<Variant>()?;
+    m.add_class::<AnalysisResult>()?;
     m.add_function(wrap_pyfunction!(load_crate, m)?)?;
     m.add_function(wrap_pyfunction!(load_module, m)?)?;
     m.add_function(wrap_pyfunction!(load_struct, m)?)?;
@@ -31,8 +33,7 @@ fn sphinx_rust(_py: Python, m: &PyModule) -> PyResult<()> {
 
 #[pyfunction]
 /// analyse a crate and cache the results to disk
-// TODO return some diagnostics
-pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<()> {
+pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<AnalysisResult> {
     // check that the cache path is a directory
     let cache_path = std::path::Path::new(cache_path);
     if !cache_path.is_dir() {
@@ -56,6 +57,8 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<()> {
         }
     };
 
+    let mut output = AnalysisResult::default();
+
     // now cache the results
     // note we don't write to disk, if the file already exists and has the same contents
     // this is because Sphinx uses the file's mtime in determining whether to rebuild
@@ -64,15 +67,16 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<()> {
     if !crates_path.exists() {
         std::fs::create_dir(&crates_path)?;
     }
-    for crate_ in &result.crates {
-        let crate_path = crates_path.join(format!("{}.json", crate_.name));
-        serialize_to_file(&crate_path, &crate_)?;
-    }
+    output.crate_ = result.crate_.name.clone();
+    let crate_path = crates_path.join(format!("{}.json", result.crate_.name));
+    serialize_to_file(&crate_path, &result.crate_)?;
+
     let modules_path = cache_path.join("modules");
     if !modules_path.exists() {
         std::fs::create_dir(&modules_path)?;
     }
     for mod_ in &result.modules {
+        output.modules.push(mod_.name.clone());
         let mod_path = modules_path.join(format!("{}.json", mod_.name));
         serialize_to_file(&mod_path, &mod_)?;
     }
@@ -81,6 +85,7 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<()> {
         std::fs::create_dir(&structs_path)?;
     }
     for struct_ in &result.structs {
+        output.structs.push(struct_.name.clone());
         let struct_path = structs_path.join(format!("{}.json", struct_.name));
         serialize_to_file(&struct_path, &struct_)?;
     }
@@ -89,10 +94,25 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<()> {
         std::fs::create_dir(&enums_path)?;
     }
     for enum_ in &result.enums {
+        output.enums.push(enum_.name.clone());
         let enum_path = enums_path.join(format!("{}.json", enum_.name));
         serialize_to_file(&enum_path, &enum_)?;
     }
-    Ok(())
+    Ok(output)
+}
+
+#[pyclass]
+#[derive(Debug, Clone, Default)]
+/// pyo3 representation of the result of an analysis
+pub struct AnalysisResult {
+    #[pyo3(get)]
+    pub crate_: String,
+    #[pyo3(get)]
+    pub modules: Vec<String>,
+    #[pyo3(get)]
+    pub structs: Vec<String>,
+    #[pyo3(get)]
+    pub enums: Vec<String>,
 }
 
 /// Serialize a value to a file.
@@ -367,13 +387,51 @@ impl From<analyze::Module> for Module {
 
 #[pyclass]
 #[derive(Clone)]
+/// pyo3 representation of a segment of a type
+/// types are split into segments to allow for identification of referenceable elements
+pub struct TypeSegment {
+    #[pyo3(get)]
+    pub content: String,
+    #[pyo3(get)]
+    pub is_path: bool,
+}
+
+#[pymethods]
+impl TypeSegment {
+    pub fn __repr__(&self) -> String {
+        if self.is_path {
+            format!("ref({:?})", self.content)
+        } else {
+            format!("{:?}", self.content)
+        }
+    }
+}
+
+impl From<analyze::TypeSegment> for TypeSegment {
+    fn from(field: analyze::TypeSegment) -> Self {
+        match field {
+            analyze::TypeSegment::Path(content) => TypeSegment {
+                content,
+                is_path: true,
+            },
+            analyze::TypeSegment::String(content) => TypeSegment {
+                content,
+                is_path: false,
+            },
+        }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
 /// pyo3 representation of a struct field
 pub struct Field {
     #[pyo3(get)]
     pub name: Option<String>,
     #[pyo3(get)]
     pub docstring: String,
-    // TODO add type
+    #[pyo3(get)]
+    pub type_: Vec<TypeSegment>,
 }
 
 #[pymethods]
@@ -388,6 +446,7 @@ impl From<analyze::Field> for Field {
         Field {
             name: field.name,
             docstring: field.docstring,
+            type_: field.type_.into_iter().map(TypeSegment::from).collect(),
         }
     }
 }

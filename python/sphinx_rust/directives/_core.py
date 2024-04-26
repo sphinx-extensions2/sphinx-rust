@@ -1,0 +1,94 @@
+from typing import TYPE_CHECKING
+
+from docutils import nodes, utils
+from sphinx.util.docutils import LoggingReporter, SphinxDirective
+from sphinx.util.logging import getLogger
+
+if TYPE_CHECKING:
+    from sphinx.environment import BuildEnvironment
+
+
+LOGGER = getLogger(__name__)
+
+
+class RustAutoDirective(SphinxDirective):
+    """Base directive to auto-document a Rust object."""
+
+    required_arguments = 1
+    optional_arguments = 0
+    final_argument_whitespace = False
+    has_content = False
+    option_spec = {}
+
+    @property
+    def doc(self) -> nodes.document:
+        return self.state.document  # type: ignore[no-any-return]
+
+    @property
+    def cache_path(self) -> str:
+        return str(self.env.rust_cache_path)  # type: ignore[attr-defined]
+
+    def create_section(self, title: str) -> nodes.section:
+        section = nodes.section()
+        self.set_source_info(section)
+        section += nodes.title(text=title)
+        self.doc.note_implicit_target(section, section)
+        return section
+
+
+def create_field_list(
+    fields: list[tuple[list[nodes.Node], list[nodes.Node]]],
+) -> nodes.field_list:
+    """Create a field list from a list of field names and bodies."""
+    field_list = nodes.field_list()
+    for name, body in fields:
+        field = nodes.field()
+        field += nodes.field_name("", "", *name)
+        field += nodes.field_body("", *body)
+        field_list += field
+    return field_list
+
+
+def create_summary_table(
+    rows: list[tuple[list[nodes.Node], list[nodes.Node]]],
+) -> nodes.table:
+    """Create a table with two columns from a list of rows."""
+    table = nodes.table(align="left", classes=["colwidths-auto"])
+    tgroup = nodes.tgroup(cols=2)
+    table += tgroup
+    tgroup += nodes.colspec(colwidth=1)
+    tgroup += nodes.colspec(colwidth=1)
+    tbody = nodes.tbody()
+    tgroup += tbody
+    for left, right in rows:
+        row = nodes.row()
+        tbody += row
+        for cell in (left, right):
+            entry = nodes.entry()
+            row += entry
+            entry += cell
+    return table
+
+
+def parse_docstring(
+    env: "BuildEnvironment",
+    doc: nodes.document,
+    docstring: str,
+    /,
+    *,
+    filetype: str = "restructuredtext",
+) -> list[nodes.Node]:
+    """parse into a dummy document and return created nodes."""
+    source_path = env.doc2path(  # TODO this actually should be the rust file path
+        env.docname
+    )
+    # TODO how to handle line numbers?
+    document = utils.new_document(source_path, doc.settings)
+    document.reporter = LoggingReporter.from_reporter(doc.reporter)
+    document.reporter.source = source_path
+    # TODO cache parser creation
+    parser = env.app.registry.create_source_parser(env.app, filetype)
+    parser.parse(docstring, document)
+    # TODO merge document metadata with parent document, e.g. targets etc?
+    # or docutils.Include actually runs the transforms on the included document, before returning its children
+    return document.children

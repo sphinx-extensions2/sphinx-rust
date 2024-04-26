@@ -5,4 +5,4 @@ Auto-document Rust code with Sphinx!
 
 .. toctree::
 
-    api
+    api/index
