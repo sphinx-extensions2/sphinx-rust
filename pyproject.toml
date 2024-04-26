@@ -52,6 +52,7 @@ dev = [
 ]
 docs = [
   "furo",
+  "myst-parser",
   "sphinx_needs",
   "sphinxcontrib-plantuml"
 ]
