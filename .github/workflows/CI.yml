@@ -35,10 +35,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-        - '3.8'
         - '3.9'
         - '3.10'
         - '3.11'
+        - '3.12'
         - 'pypy3.9'
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +68,7 @@ jobs:
         - x86
         - aarch64
         - armv7
-        # - s390x  # TODO build fails: "error: failed to run custom build command for `psm v0.1.21`""
+        - s390x  # TODO build fails: "error: failed to run custom build command for `psm v0.1.21`""
         - ppc64le
     steps:
       - uses: actions/checkout@v3

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from docutils import nodes, utils
@@ -28,7 +30,7 @@ class RustAutoDirective(SphinxDirective):
         return self.state.document  # type: ignore[no-any-return]
 
     @property
-    def rust_domain(self) -> "RustDomain":
+    def rust_domain(self) -> RustDomain:
         # avoid circular import
         from sphinx_rust.domain import RustDomain  # noqa: PLC0415
 
@@ -81,7 +83,7 @@ def create_summary_table(
 
 
 def parse_docstring(
-    env: "BuildEnvironment",
+    env: BuildEnvironment,
     doc: nodes.document,
     docstring: str,
     /,
@@ -105,7 +107,7 @@ def parse_docstring(
 
 
 def create_xref(
-    docname: str, ident: str, objtype: "ObjType", *, warn_dangling: bool = False
+    docname: str, ident: str, objtype: ObjType, *, warn_dangling: bool = False
 ) -> addnodes.pending_xref:
     """Create a cross-reference node."""
     options = {
