@@ -1,0 +1,18 @@
+# https://docs.readthedocs.io/en/stable/config-file/v2.html#supported-settings
+# https://www.maturin.rs/sphinx#read-the-docs-integration 
+
+version: 2
+
+sphinx:
+  builder: html
+
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.9"
+    rust: "1.75"
+
+python:
+  install:
+    - method: pip
+      path: .
