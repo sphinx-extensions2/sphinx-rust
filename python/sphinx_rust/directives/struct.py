@@ -13,6 +13,7 @@ from ._core import (
     RustAutoDirective,
     create_field_list,
     parse_docstring,
+    type_segs_to_nodes,
 )
 
 if TYPE_CHECKING:
@@ -60,9 +61,29 @@ class RustStructAutoDirective(RustAutoDirective):
 
         desc = addnodes.desc()
         root += desc
-        signature = addnodes.desc_signature(
-            struct.name, f'pub struct {struct.name.split("::")[-1]} {{}}'
-        )
+        if struct.fields:
+            sig_lines = [
+                addnodes.desc_signature_line(
+                    "", f'pub struct {struct.name.split("::")[-1]} {{'
+                )
+            ]
+            sig_lines.extend(
+                addnodes.desc_signature_line(
+                    "",
+                    f"    pub {field.name}: ",
+                    *type_segs_to_nodes(field.type_),
+                    nodes.Text(","),
+                )
+                for field in struct.fields
+            )
+            sig_lines.append(addnodes.desc_signature_line("", "}"))
+            signature = addnodes.desc_signature(struct.name, "", *sig_lines)
+            signature["is_multiline"] = True
+        else:
+            signature = addnodes.desc_signature(
+                struct.name,
+                f'pub struct {struct.name.split("::")[-1]}(/* private fields */);',
+            )
         desc += signature
         # TODO add fields to signature
         # desc += addnodes.desc_content("", nodes.paragraph("", ))
@@ -82,16 +103,7 @@ class RustStructAutoDirective(RustAutoDirective):
                     (
                         [nodes.Text(field.name)],
                         [
-                            nodes.paragraph(
-                                "",
-                                "",
-                                *[
-                                    nodes.strong("", s.content)
-                                    if s.is_path
-                                    else nodes.Text(s.content)
-                                    for s in field.type_
-                                ],
-                            ),
+                            nodes.paragraph("", "", *type_segs_to_nodes(field.type_)),
                             *parse_docstring(self.env, self.doc, field.docstring),
                         ],
                     )

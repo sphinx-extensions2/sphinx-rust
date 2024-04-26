@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/useblocks/sphinx-rust"
+Repository = "https://github.com/sphinx-extensions2/sphinx-rust"
 Documentation = "http://sphinx-rust.readthedocs.io"
 
 [project.optional-dependencies]

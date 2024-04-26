@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from sphinx.environment import BuildEnvironment
 
     from sphinx_rust.domain import ObjType, RustDomain
+    from sphinx_rust.sphinx_rust import TypeSegment
 
 
 LOGGER = getLogger(__name__)
@@ -123,3 +124,15 @@ def create_xref(
     ref += nodes.literal(name, name)
 
     return ref
+
+
+def type_segs_to_nodes(segs: list[TypeSegment]) -> list[nodes.Node]:
+    """Convert a list of type segments to nodes."""
+    nodes_: list[nodes.Node] = []
+    for seg in segs:
+        if seg.is_path:
+            # TODO create cross-reference
+            nodes_.append(nodes.strong("", seg.content))
+        else:
+            nodes_.append(nodes.Text(seg.content))
+    return nodes_
