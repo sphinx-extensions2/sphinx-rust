@@ -93,7 +93,7 @@ Contents
 .. toctree::
     :caption: Integrations
 
-    needs
+    integrations/needs
 
 .. toctree::
     :caption: Development
