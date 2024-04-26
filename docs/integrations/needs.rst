@@ -1,5 +1,5 @@
-Sphinx-needs integration
-========================
+Sphinx-needs
+============
 
 This package integrates with the `sphinx-needs` package to allow for the creation of requirements and test cases from Rust code.
 
