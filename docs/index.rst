@@ -49,7 +49,10 @@ Now you can use the `rust` cross-referencing roles to link to items in your Rust
 - :rust:struct:`analyzer::analyze::struct_::Struct`
 - :rust:enum:`analyzer::analyze::type_::TypeSegment`
 
+----------------
+
 .. toctree::
     :caption: API Examples
 
+    needs
     api/index

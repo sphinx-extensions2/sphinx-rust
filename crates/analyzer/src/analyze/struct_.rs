@@ -9,6 +9,11 @@ use super::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Representation of a Struct
+///
+/// .. req:: Represent a struct
+///     :id: RUST004
+///     :tags: rust
+///     :status: in-progress
 pub struct Struct {
     /// The name of the struct
     pub name: String,

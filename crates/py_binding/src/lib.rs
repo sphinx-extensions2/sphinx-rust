@@ -1,6 +1,12 @@
 //! The backend for the sphinx_rust Python package.
 //!
 //! This module provides a Python interface to the ``analyzer`` crate.
+//!
+//! .. req:: Integrate rust with sphinx
+//!     :id: RUST001
+//!     :tags: rust
+//!
+//!     We need to integrate Sphinx with Rust so that we can use the `sphinx_rust` backend to generate documentation for Rust code.
 
 use pyo3::{exceptions::PyIOError, prelude::*};
 

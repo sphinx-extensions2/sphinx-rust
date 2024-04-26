@@ -1,0 +1,4 @@
+/* required for nice formatting with furo */
+table.need {
+    background-color: var(--color-code-background);
+}
