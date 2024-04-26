@@ -178,39 +178,42 @@ class RustDomain(Domain):
 def create_pages(srcdir: Path, result: AnalysisResult) -> None:
     """Create the pages for the analyzed crate."""
     root = srcdir.joinpath("api", "crates", result.crate_)
-    if (
-        root.exists()
-    ):  # TODO don't write if not changed (but still remove outdated pages)
+    if root.exists():
+        # TODO only update changed files (so that sphinx knows what to rebuild)
         shutil.rmtree(root)
-    items = root.joinpath("items")
-    items.mkdir(parents=True, exist_ok=True)
+    root.mkdir(parents=True, exist_ok=True)
     root.joinpath(".gitignore").write_text("*\n")
-    pages = []
-    for module in result.modules:
-        module_title = "::".join(module.split("::")[1:])
-        pages.append(module_title)
-        title = f"Module ``{module_title}``"
-        items.joinpath(f"{module_title}.rst").write_text(
-            f"{title}\n{'=' * len(title)}\n\n.. rust:module:: {module}\n"
-        )
-    for struct in result.structs:
-        struct_title = "::".join(struct.split("::")[1:])
-        pages.append(struct_title)
-        title = f"Struct ``{struct_title}``"
-        items.joinpath(f"{struct_title}.rst").write_text(
-            f"{title}\n{'=' * len(title)}\n\n.. rust:struct:: {struct}\n"
-        )
-    for enum in result.enums:
-        enum_title = "::".join(enum.split("::")[1:])
-        pages.append(enum_title)
-        title = f"Enum ``{enum_title}``"
-        items.joinpath(f"{enum_title}.rst").write_text(
-            f"{title}\n{'=' * len(title)}\n\n.. rust:enum:: {enum}\n"
-        )
+
+    # create the sub-indexes
+    indexes = []
+    if result.modules:
+        create_object_pages(root, "module", result.modules)
+        indexes.append("modules/index")
+    if result.structs:
+        create_object_pages(root, "struct", result.structs)
+        indexes.append("structs/index")
+    if result.enums:
+        create_object_pages(root, "enum", result.enums)
+        indexes.append("enums/index")
+
+    # create the main index
     title = f"Crate ``{result.crate_}``"
     index_content = f"{title}\n{'=' * len(title)}\n\n.. rust:crate:: {result.crate_}"
-    if pages:
-        index_content += "\n\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n"
-        for page in pages:
-            index_content += f"    items/{page}\n"
+    index_content += "\n\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n"
+    for index in indexes:
+        index_content += f"    {index}\n"
     root.joinpath("index.rst").write_text(index_content)
+
+
+def create_object_pages(folder: Path, otype: str, names: list[str]) -> None:
+    """Create the pages for the objects of a certain type."""
+    ofolder = folder.joinpath(otype + "s")
+    ofolder.mkdir(exist_ok=True)
+    index_content = f"{otype.capitalize()}s\n{'=' * (len(otype) + 1)}\n\n.. toctree::\n    :maxdepth: 1\n\n"
+    for name in names:
+        index_content += f"    {name}\n"
+        title = f"{otype.capitalize()} ``{name}``"
+        ofolder.joinpath(f"{name}.rst").write_text(
+            f"{title}\n{'=' * len(title)}\n\n.. rust:{otype}:: {name}\n"
+        )
+    ofolder.joinpath("index.rst").write_text(index_content)
