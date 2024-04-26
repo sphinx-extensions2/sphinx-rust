@@ -16,7 +16,7 @@ use analyzer::analyze;
 /// sphinx_rust backend
 // Note: The name of this function must match the `lib.name` setting in the `Cargo.toml`,
 // else Python will not be able to import the module.
-fn sphinx_rust(_py: Python, m: &PyModule) -> PyResult<()> {
+fn sphinx_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(analyze_crate, m)?)?;
     m.add_class::<Crate>()?;
