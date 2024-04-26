@@ -177,13 +177,14 @@ class RustDomain(Domain):
 
 def create_pages(srcdir: Path, result: AnalysisResult) -> None:
     """Create the pages for the analyzed crate."""
-    # TODO don't write if not changed (but still remove outdated pages)
-    # TODO write or append to .gitignore?
     root = srcdir.joinpath("api", "crates", result.crate_)
-    if root.exists():
+    if (
+        root.exists()
+    ):  # TODO don't write if not changed (but still remove outdated pages)
         shutil.rmtree(root)
     items = root.joinpath("items")
     items.mkdir(parents=True, exist_ok=True)
+    root.joinpath(".gitignore").write_text("*\n")
     pages = []
     for module in result.modules:
         module_title = "::".join(module.split("::")[1:])

@@ -42,6 +42,16 @@ Add `sphinx_rust` to your `conf.py`, and specifiy the paths to the Rust crates y
     ]
     ...
 
+Now add a `toctree` in your `index.rst`, to point towards the generated documentation for each crate
+(by default written to `api/crates` in the source directory of your Sphinx project):
+
+.. code-block:: restructuredtext
+
+    .. toctree::
+        :caption: Rust API
+
+        api/crates/crate/index
+
 That's it!
 
 Now you can use the `rust` cross-referencing roles to link to items in your Rust crates:
@@ -73,9 +83,14 @@ Contents
     Quick-start <self>
 
 .. toctree::
-    :caption: API Examples
+    :caption: Rust API
 
-    api/index
+    api/crates/analyzer/index
+    api/crates/sphinx_rust/index
+
+.. toctree::
+    :caption: Integrations
+
     needs
 
 .. toctree::
