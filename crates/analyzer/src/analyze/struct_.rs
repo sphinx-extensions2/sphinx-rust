@@ -15,50 +15,70 @@ use super::{
 ///     :tags: rust
 ///     :status: in-progress
 pub struct Struct {
-    /// The name of the struct
-    pub name: String,
+    /// The fully qualified name of the struct
+    pub path: Vec<String>,
     /// The docstring of the struct
     pub docstring: String,
     pub fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a Struct field
-pub struct Field {
-    /// The name of the field
-    pub name: Option<String>,
-    /// The docstring of the field
-    pub docstring: String,
-    pub type_: Vec<TypeSegment>,
-}
-
 impl Struct {
+    /// Fully qualified name of the variant
+    pub fn path_str(&self) -> String {
+        self.path.join("::")
+    }
     /// Extract the relevant information from the AST
-    pub fn parse(parent: &str, ast: &ItemStruct) -> Self {
-        let name = format!("{}::{}", parent, ast.ident);
+    pub fn parse(parent: &[&str], ast: &ItemStruct) -> Self {
+        let name = ast.ident.to_string();
+        let path = parent
+            .iter()
+            .copied()
+            .chain(Some(name.as_str()))
+            .collect::<Vec<&str>>();
         let docstring = docstring_from_attrs(&ast.attrs);
         let mut struct_ = Self {
-            name,
+            path: path.iter().map(|s| s.to_string()).collect(),
             docstring,
             fields: vec![],
         };
-        for field in ast.fields.iter() {
+        for (i, field) in ast.fields.iter().enumerate() {
             if let Visibility::Public(_) = field.vis {
-                struct_.fields.push(Field::parse(field));
+                struct_.fields.push(Field::parse(&path, i, field));
             }
         }
         struct_
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Representation of a Struct or Enum field
+pub struct Field {
+    /// The fully qualified name of the field.
+    ///
+    /// Note, for fields of tuple structs, the final component is the index of the field
+    pub path: Vec<String>,
+    /// The docstring of the field
+    pub docstring: String,
+    pub type_: Vec<TypeSegment>,
+}
+
 impl Field {
     /// Extract the relevant information from the AST
-    pub fn parse(ast: &syn::Field) -> Self {
-        let name = ast.ident.as_ref().map(|name| name.to_string());
+    pub fn parse(parent: &[&str], position: usize, ast: &syn::Field) -> Self {
+        let name = ast
+            .ident
+            .as_ref()
+            .map(|name| name.to_string())
+            .unwrap_or(position.to_string());
+        let path = parent
+            .iter()
+            .copied()
+            .chain(Some(name.as_str()))
+            .collect::<Vec<&str>>();
         let docstring = docstring_from_attrs(&ast.attrs);
         let type_ = convert_type(&ast.ty);
         Self {
-            name,
+            path: path.iter().map(|s| s.to_string()).collect(),
             docstring,
             type_,
         }
@@ -78,10 +98,12 @@ mod tests {
             /// docstring
             pub struct MyStruct;
         };
-        let struct_ = Struct::parse("crate", &ast);
+        let struct_ = Struct::parse(&["crate"], &ast);
         assert_yaml_snapshot!(struct_, @r###"
         ---
-        name: "crate::MyStruct"
+        path:
+          - crate
+          - MyStruct
         docstring: "Multi-line\ndocstring"
         fields: []
         "###);
@@ -99,13 +121,18 @@ mod tests {
                 other: String,
             }
         };
-        let struct_ = Struct::parse("crate", &ast);
+        let struct_ = Struct::parse(&["crate"], &ast);
         assert_yaml_snapshot!(struct_, @r###"
         ---
-        name: "crate::MyStruct"
+        path:
+          - crate
+          - MyStruct
         docstring: "Multi-line\ndocstring"
         fields:
-          - name: my_field
+          - path:
+              - crate
+              - MyStruct
+              - my_field
             docstring: Docstring
             type_:
               - String: "["

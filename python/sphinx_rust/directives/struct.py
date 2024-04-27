@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from docutils import nodes
 from sphinx import addnodes
 from sphinx.util.logging import getLogger
@@ -15,9 +13,6 @@ from ._core import (
     parse_docstring,
     type_segs_to_nodes,
 )
-
-if TYPE_CHECKING:
-    pass
 
 LOGGER = getLogger(__name__)
 
@@ -56,10 +51,9 @@ class RustStructAutoDirective(RustAutoDirective):
         root += desc
         if struct.fields:
             sig_lines = [
-                addnodes.desc_signature_line(
-                    "", f'pub struct {struct.name.split("::")[-1]} {{'
-                )
+                addnodes.desc_signature_line("", f"pub struct {struct.name} {{")
             ]
+            # TODO properly print structs with tuple fields
             sig_lines.extend(
                 addnodes.desc_signature_line(
                     "",
@@ -70,23 +64,23 @@ class RustStructAutoDirective(RustAutoDirective):
                 for field in struct.fields
             )
             sig_lines.append(addnodes.desc_signature_line("", "}"))
-            signature = addnodes.desc_signature(struct.name, "", *sig_lines)
+            signature = addnodes.desc_signature(struct.path_str, "", *sig_lines)
             signature["is_multiline"] = True
         else:
             signature = addnodes.desc_signature(
-                struct.name,
-                f'pub struct {struct.name.split("::")[-1]}(/* private fields */);',
+                struct.path_str,
+                f"pub struct {struct.name}(/* private fields */);",
             )
         desc += signature
         # TODO add fields to signature
         # desc += addnodes.desc_content("", nodes.paragraph("", ))
-        node_id = make_id(self.env, self.doc, "", struct.name)
+        node_id = make_id(self.env, self.doc, "", struct.path_str)
         signature["ids"].append(node_id)
         self.doc.note_explicit_target(signature)
-        self.rust_domain.note_object(struct.name, "struct", node_id, signature)
+        self.rust_domain.note_object(struct.path_str, "struct", node_id, signature)
 
         if struct.docstring:
-            root += parse_docstring(self.env, self.doc, struct.docstring)
+            root += parse_docstring(self.env, self.doc, struct)
 
         if struct.fields:
             section = self.create_section("Fields")
@@ -94,13 +88,13 @@ class RustStructAutoDirective(RustAutoDirective):
             section += create_field_list(
                 [
                     (
-                        [nodes.Text(field.name)],
+                        [nodes.Text(field.name or str(i))],
                         [
                             nodes.paragraph("", "", *type_segs_to_nodes(field.type_)),
-                            *parse_docstring(self.env, self.doc, field.docstring),
+                            *parse_docstring(self.env, self.doc, field),
                         ],
                     )
-                    for field in struct.fields
+                    for i, field in enumerate(struct.fields)
                 ]
             )
 

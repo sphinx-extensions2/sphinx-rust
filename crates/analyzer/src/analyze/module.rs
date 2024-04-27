@@ -13,19 +13,23 @@ use super::{docstring_from_attrs, enum_::Enum, struct_::Struct};
 ///     :tags: rust
 ///     :status: in-progress
 pub struct Module {
-    pub name: String,
+    /// The fully qualified name of the module
+    pub path: Vec<String>,
     pub docstring: String,
     /// The public declarations in the module
     pub declarations: Vec<String>,
 }
 
 impl Module {
+    /// Fully qualified name of the variant
+    pub fn path_str(&self) -> String {
+        self.path.join("::")
+    }
     /// Extract the relevant information from the AST
-    pub fn parse(name: &str, content: &str) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
+    pub fn parse(path: &[&str], content: &str) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
         let syntax = parse_file(content)?;
-
         let mut mod_ = Self {
-            name: name.to_string(),
+            path: path.iter().map(|s| s.to_string()).collect(),
             docstring: docstring_from_attrs(&syntax.attrs),
             declarations: vec![],
         };
@@ -44,13 +48,13 @@ impl Module {
                 }
                 syn::Item::Struct(struct_item) => {
                     if let syn::Visibility::Public(_) = struct_item.vis {
-                        let struct_ = Struct::parse(name, struct_item);
+                        let struct_ = Struct::parse(path, struct_item);
                         structs.push(struct_);
                     }
                 }
                 syn::Item::Enum(enum_item) => {
                     if let syn::Visibility::Public(_) = enum_item.vis {
-                        let enum_ = Enum::parse(name, enum_item);
+                        let enum_ = Enum::parse(path, enum_item);
                         enums.push(enum_);
                     }
                 }
@@ -81,17 +85,23 @@ pub enum MyEnum {
     MyVariant1,
 }
 "###;
-        let mod_ = Module::parse("test", content).unwrap();
+        let mod_ = Module::parse(&["test"], content).unwrap();
         assert_yaml_snapshot!(mod_, @r###"
         ---
-        - name: test
+        - path:
+            - test
           docstring: "Multi-line\ndocstring"
           declarations: []
         - []
-        - - name: "test::MyEnum"
+        - - path:
+              - test
+              - MyEnum
             docstring: ""
             variants:
-              - name: MyVariant1
+              - path:
+                  - test
+                  - MyEnum
+                  - MyVariant1
                 docstring: ""
                 discriminant: ~
                 fields: []

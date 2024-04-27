@@ -78,6 +78,11 @@ class Crate:
     """Representation of a crate."""
 
     name: str
+    """The name of the crate."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
     version: str
     docstring: str
 
@@ -85,8 +90,63 @@ class Module:
     """Representation of a module."""
 
     name: str
-    """The fully qualified name of the module, e.g. ``crate::module``."""
+    """The name of the module."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
     docstring: str
+
+class Struct:
+    """Representation of a struct."""
+
+    name: str
+    """The name of the struct."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
+    docstring: str
+    fields: list[Field]
+
+class Enum:
+    """Representation of an enum."""
+
+    name: str
+    """The name of the enum."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
+    docstring: str
+    variants: list[Variant]
+
+class Variant:
+    """Representation of an enum variant."""
+
+    name: str
+    """The name of the variant."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
+    docstring: str
+    fields: list[Field]
+
+class Field:
+    """Representation of a struct field."""
+
+    name: str
+    """The name of the field."""
+    path: list[str]
+    """The fully qualified path.
+
+    Note, for fields of tuple structs, the final component is the index of the field
+    """
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
+    docstring: str
+    type_: list[TypeSegment]
 
 class TypeSegment:
     """Representation of a segment of a type.
@@ -96,35 +156,3 @@ class TypeSegment:
 
     content: str
     is_path: bool
-
-class Field:
-    """Representation of a struct field."""
-
-    name: str
-    """The fully qualified name of the field."""
-    docstring: str
-    type_: list[TypeSegment]
-
-class Struct:
-    """Representation of a struct."""
-
-    name: str
-    """The fully qualified name of the struct, e.g. ``crate::module::Struct``."""
-    docstring: str
-    fields: list[Field]
-
-class Variant:
-    """Representation of an enum variant."""
-
-    name: str
-    """The  name of the enum variant."""
-    docstring: str
-    fields: list[Field]
-
-class Enum:
-    """Representation of an enum."""
-
-    name: str
-    """The fully qualified name of the enum, e.g. ``crate::module::Enum``."""
-    docstring: str
-    variants: list[Variant]

@@ -73,7 +73,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
     // read the top-level module
     let content = std::fs::read_to_string(&root_file)?;
-    let (module, structs, enums) = Module::parse(&crate_.name, &content).context(format!(
+    let (module, structs, enums) = Module::parse(&[&crate_.name], &content).context(format!(
         "Error parsing module {}",
         root_file.to_string_lossy()
     ))?;
@@ -85,7 +85,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
             (
                 root_file.parent().unwrap().to_path_buf(),
                 s.to_string(),
-                crate_.name.clone(),
+                vec![crate_.name.clone()],
             )
         })
         .collect::<Vec<_>>();
@@ -94,7 +94,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
-    while let Some((parent_dir, module_name, parent_ident)) = modules_to_read.pop() {
+    while let Some((parent_dir, module_name, parent)) = modules_to_read.pop() {
         let (module_path, submodule_dir) =
             if parent_dir.join(&module_name).with_extension("rs").exists() {
                 (
@@ -117,8 +117,12 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         read_modules.push(module_path.clone());
 
         let content = std::fs::read_to_string(&module_path)?;
-        let path_name = format!("{}::{}", parent_ident, module_name);
-        let (module, structs, enums) = Module::parse(&path_name, &content).context(format!(
+        let path: Vec<String> = [&parent[..], &[module_name]].concat();
+        let (module, structs, enums) = Module::parse(
+            &path.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+            &content,
+        )
+        .context(format!(
             "Error parsing module {}",
             module_path.to_string_lossy()
         ))?;
@@ -126,7 +130,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
             module
                 .declarations
                 .iter()
-                .map(|s| (submodule_dir.clone(), s.to_string(), path_name.clone()))
+                .map(|s| (submodule_dir.clone(), s.to_string(), path.clone()))
                 .collect::<Vec<_>>(),
         );
         result_.modules.push(module);
@@ -256,30 +260,49 @@ mod tests {
 
         assert_yaml_snapshot!(crate_, @r###"
         ---
-        crates:
-          - name: my_crate
-            version: 0.1.0
-            docstring: The crate docstring
+        crate_:
+          name: my_crate
+          version: 0.1.0
+          docstring: The crate docstring
         modules:
-          - name: "my_crate::my_module"
+          - path:
+              - my_crate
+              - my_module
             docstring: The module docstring
             declarations:
               - my_submodule
-          - name: "my_crate::my_module::my_submodule"
+          - path:
+              - my_crate
+              - my_module
+              - my_submodule
             docstring: The sub-module docstring
             declarations: []
         structs:
-          - name: "my_crate::my_module::DummyStruct1"
+          - path:
+              - my_crate
+              - my_module
+              - DummyStruct1
             docstring: The struct1 docstring
             fields: []
-          - name: "my_crate::my_module::my_submodule::DummyStruct2"
+          - path:
+              - my_crate
+              - my_module
+              - my_submodule
+              - DummyStruct2
             docstring: The struct2 docstring
             fields: []
         enums:
-          - name: "my_crate::my_module::DummyEnum1"
+          - path:
+              - my_crate
+              - my_module
+              - DummyEnum1
             docstring: The enum1 docstring
             variants: []
-          - name: "my_crate::my_module::my_submodule::DummyEnum2"
+          - path:
+              - my_crate
+              - my_module
+              - my_submodule
+              - DummyEnum2
             docstring: The enum2 docstring
             variants: []
         "###);

@@ -2,15 +2,20 @@
 //!
 //! This module provides a Python interface to the ``analyzer`` crate.
 //!
-//! .. req:: Integrate rust with sphinx
-//!     :id: RUST001
-//!     :tags: rust
+//! ```{req} Integrate rust with sphinx
+//! :id: RUST001
+//! :tags: rust
 //!
-//!     We need to integrate Sphinx with Rust so that we can use the `sphinx_rust` backend to generate documentation for Rust code.
+//! We need to integrate Sphinx with Rust so that we can use the `sphinx_rust` backend to generate documentation for Rust code.
+//! ```
 
 use pyo3::{exceptions::PyIOError, prelude::*};
 
 use analyzer::analyze;
+
+use crate::objects::{Crate, Enum, Field, Module, Struct, TypeSegment, Variant};
+
+pub mod objects;
 
 #[pymodule]
 /// sphinx_rust backend
@@ -82,8 +87,8 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<AnalysisRes
         std::fs::create_dir(&modules_path)?;
     }
     for mod_ in &result.modules {
-        output.modules.push(mod_.name.clone());
-        let mod_path = modules_path.join(format!("{}.json", mod_.name));
+        output.modules.push(mod_.path_str().clone());
+        let mod_path = modules_path.join(format!("{}.json", mod_.path_str()));
         serialize_to_file(&mod_path, &mod_)?;
     }
     let structs_path = cache_path.join("structs");
@@ -91,8 +96,8 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<AnalysisRes
         std::fs::create_dir(&structs_path)?;
     }
     for struct_ in &result.structs {
-        output.structs.push(struct_.name.clone());
-        let struct_path = structs_path.join(format!("{}.json", struct_.name));
+        output.structs.push(struct_.path_str().clone());
+        let struct_path = structs_path.join(format!("{}.json", struct_.path_str()));
         serialize_to_file(&struct_path, &struct_)?;
     }
     let enums_path = cache_path.join("enums");
@@ -100,8 +105,8 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<AnalysisRes
         std::fs::create_dir(&enums_path)?;
     }
     for enum_ in &result.enums {
-        output.enums.push(enum_.name.clone());
-        let enum_path = enums_path.join(format!("{}.json", enum_.name));
+        output.enums.push(enum_.path_str().clone());
+        let enum_path = enums_path.join(format!("{}.json", enum_.path_str()));
         serialize_to_file(&enum_path, &enum_)?;
     }
     Ok(output)
@@ -147,18 +152,14 @@ where
         }
     };
     if path.exists() {
-        let existing_value = match std::fs::read_to_string(path) {
-            Ok(value) => value,
-            Err(err) => {
-                return Err(PyIOError::new_err(format!(
-                    "Could not read existing value: {}",
-                    err
-                )))
+        match std::fs::read_to_string(path) {
+            Ok(old_value) => {
+                if value == old_value {
+                    return Ok(());
+                }
             }
+            Err(_) => {}
         };
-        if existing_value == value {
-            return Ok(());
-        }
     }
     match std::fs::write(path, value) {
         Err(err) => Err(PyIOError::new_err(format!(
@@ -344,213 +345,4 @@ where
         }
     };
     Ok(obj)
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of a crate
-pub struct Crate {
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub version: String,
-    #[pyo3(get)]
-    pub docstring: String,
-}
-
-#[pymethods]
-impl Crate {
-    pub fn __repr__(&self) -> String {
-        format!("Crate(name={:?}, version={:?})", self.name, self.version)
-    }
-}
-
-impl From<analyze::Crate> for Crate {
-    fn from(crate_: analyze::Crate) -> Self {
-        Crate {
-            name: crate_.name,
-            version: crate_.version,
-            docstring: crate_.docstring,
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of a module
-pub struct Module {
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub docstring: String,
-}
-
-#[pymethods]
-impl Module {
-    pub fn __repr__(&self) -> String {
-        format!("Module(name={:?})", self.name)
-    }
-}
-
-impl From<analyze::Module> for Module {
-    fn from(module: analyze::Module) -> Self {
-        Module {
-            name: module.name,
-            docstring: module.docstring,
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of a segment of a type
-/// types are split into segments to allow for identification of referenceable elements
-pub struct TypeSegment {
-    #[pyo3(get)]
-    pub content: String,
-    #[pyo3(get)]
-    pub is_path: bool,
-}
-
-#[pymethods]
-impl TypeSegment {
-    pub fn __repr__(&self) -> String {
-        if self.is_path {
-            format!("ref({:?})", self.content)
-        } else {
-            format!("{:?}", self.content)
-        }
-    }
-}
-
-impl From<analyze::TypeSegment> for TypeSegment {
-    fn from(field: analyze::TypeSegment) -> Self {
-        match field {
-            analyze::TypeSegment::Path(content) => TypeSegment {
-                content,
-                is_path: true,
-            },
-            analyze::TypeSegment::String(content) => TypeSegment {
-                content,
-                is_path: false,
-            },
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of a struct field
-pub struct Field {
-    #[pyo3(get)]
-    pub name: Option<String>,
-    #[pyo3(get)]
-    pub docstring: String,
-    #[pyo3(get)]
-    pub type_: Vec<TypeSegment>,
-}
-
-#[pymethods]
-impl Field {
-    pub fn __repr__(&self) -> String {
-        format!("Field(name={:?})", self.name)
-    }
-}
-
-impl From<analyze::Field> for Field {
-    fn from(field: analyze::Field) -> Self {
-        Field {
-            name: field.name,
-            docstring: field.docstring,
-            type_: field.type_.into_iter().map(TypeSegment::from).collect(),
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of a struct
-pub struct Struct {
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub docstring: String,
-    #[pyo3(get)]
-    pub fields: Vec<Field>,
-}
-
-#[pymethods]
-impl Struct {
-    pub fn __repr__(&self) -> String {
-        format!("Struct(name={:?})", self.name)
-    }
-}
-
-impl From<analyze::Struct> for Struct {
-    fn from(module: analyze::Struct) -> Self {
-        Struct {
-            name: module.name,
-            docstring: module.docstring,
-            fields: module.fields.into_iter().map(Field::from).collect(),
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of an enum variant
-pub struct Variant {
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub docstring: String,
-    // TODO discriminant
-    #[pyo3(get)]
-    pub fields: Vec<Field>,
-}
-
-#[pymethods]
-impl Variant {
-    pub fn __repr__(&self) -> String {
-        format!("Variant(name={:?})", self.name)
-    }
-}
-
-impl From<analyze::Variant> for Variant {
-    fn from(var: analyze::Variant) -> Self {
-        Variant {
-            name: var.name,
-            docstring: var.docstring,
-            fields: var.fields.into_iter().map(Field::from).collect(),
-        }
-    }
-}
-
-#[pyclass]
-#[derive(Clone)]
-/// pyo3 representation of an enum
-pub struct Enum {
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub docstring: String,
-    #[pyo3(get)]
-    pub variants: Vec<Variant>,
-}
-
-#[pymethods]
-impl Enum {
-    pub fn __repr__(&self) -> String {
-        format!("Enum(name={:?})", self.name)
-    }
-}
-
-impl From<analyze::Enum> for Enum {
-    fn from(module: analyze::Enum) -> Self {
-        Enum {
-            name: module.name,
-            docstring: module.docstring,
-            variants: module.variants.into_iter().map(Variant::from).collect(),
-        }
-    }
 }

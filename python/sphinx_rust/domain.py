@@ -10,6 +10,7 @@ from sphinx.domains import Domain
 from sphinx.util.logging import getLogger
 from sphinx.util.nodes import make_refnode
 
+from sphinx_rust.config import RustConfig
 from sphinx_rust.directives.crate import RustCrateAutoDirective
 from sphinx_rust.directives.enum import RustEnumAutoDirective
 from sphinx_rust.directives.module import RustModuleAutoDirective
@@ -49,6 +50,8 @@ class ObjectEntry:
 
 
 class DomainData(TypedDict):
+    """Data stored in the domain."""
+
     objects: dict[str, ObjectEntry]
 
 
@@ -78,7 +81,7 @@ class RustDomain(Domain):
 
     @classmethod
     def app_setup(cls, app: Sphinx) -> None:
-        app.add_config_value("rust_crates", [], "env")
+        RustConfig.add_configs(app)
         app.connect("builder-inited", cls.on_builder_inited)
         app.add_domain(cls)
 
@@ -91,7 +94,7 @@ class RustDomain(Domain):
         srcdir = Path(
             str(app.srcdir)
         )  # for back-compatibility, assume it might not be a Path
-        for crate in app.config.rust_crates:
+        for crate in RustConfig.from_app(app).rust_crates:
             path = Path(str(app.srcdir)) / str(crate)
             # analyze the crate
             LOGGER.info(f"[rust] Analyzing crate: {path.resolve()!s}")
@@ -113,10 +116,19 @@ class RustDomain(Domain):
         name: str,
         objtype: ObjType,
         node_id: str,
-        _signature: addnodes.desc_signature,
+        signature: addnodes.desc_signature,
     ) -> None:
-        # TODO check for duplicates
-        self.objects[name] = ObjectEntry(name, self.env.docname, node_id, objtype)
+        """Note a new object."""
+        # TODO can rust have duplicate names for different object types?
+        if name in self.objects:
+            LOGGER.warning(
+                f"Duplicate target {name!r}",
+                type="rust",
+                subtype="target",
+                location=signature,
+            )
+        else:
+            self.objects[name] = ObjectEntry(name, self.env.docname, node_id, objtype)
 
     def clear_doc(self, docname: str) -> None:
         for fullname, obj in list(self.objects.items()):
