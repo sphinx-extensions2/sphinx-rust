@@ -74,11 +74,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e .[testing]
+      - run: pip install -e .[test]
         env:
           RUST_BACKTRACE: 1
       - run: pip freeze
-      # - run: pytest
+      - run: pytest
 
   check:
     if: always()

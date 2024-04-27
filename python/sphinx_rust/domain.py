@@ -104,6 +104,7 @@ class RustDomain(Domain):
                 LOGGER.warning(
                     f"Error analyzing crate: {e!s}", type="rust", subtype="analyze"
                 )
+                return
             create_pages(srcdir, result)
 
     @property

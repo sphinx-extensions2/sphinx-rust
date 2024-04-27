@@ -38,6 +38,12 @@ To run the analysis CLI tool:
 tox -e dev -- python -m sphinx_rust.cli crates/py_binding --overwrite
 ```
 
+To run the pytest tests:
+
+```bash
+tox -e test-py39
+```
+
 To build the documentation:
 
 ```bash
