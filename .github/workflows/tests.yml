@@ -1,0 +1,92 @@
+# These jobs should be run on all commits, pull requests, and version tags.
+# They run formatting, linting and code tests.
+
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+
+  pre-commit:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.9"
+    - uses: pre-commit/action@v3.0.1
+
+  test-cargo:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: install rust stable
+      uses: dtolnay/rust-toolchain@stable
+    - name: cache rust
+      uses: Swatinem/rust-cache@v2
+    - name: Run tests
+      run: cargo test -p analyzer --lib --verbose
+
+  test-python:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version:
+        - '3.9'
+        - '3.10'
+        - '3.11'
+        - '3.12'
+        - 'pypy3.9'
+        include:
+          - os: windows-latest
+            python-version: '3.9'
+          - os: macos-latest
+            python-version: '3.9'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: install rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: cache rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: test-v1
+      - name: set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e .[testing]
+        env:
+          RUST_BACKTRACE: 1
+      - run: pip freeze
+      # - run: pytest
+
+  check:
+    if: always()
+    needs: [pre-commit, test-cargo, test-python]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
+          allowed-failures: coverage

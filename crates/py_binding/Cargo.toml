@@ -1,5 +1,5 @@
 [package]
-name = "rust_analyzer_py"
+name = "sphinx_rust"
 version = "0.0.1"
 publish = false
 edition = "2021"
