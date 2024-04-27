@@ -78,7 +78,7 @@ jobs:
         env:
           RUST_BACKTRACE: 1
       - run: pip freeze
-      # - run: pytest
+      - run: pytest
 
   check:
     if: always()

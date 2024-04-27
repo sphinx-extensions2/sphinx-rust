@@ -13,7 +13,7 @@ dynamic = ["version"]
 description = "Sphinx plugin for documentation of Rust projects."
 authors = [{ name = "Chris Sewell", email = "chrisj_sewell@hotmail.com" }]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 keywords = [
   "sphinx",
@@ -26,7 +26,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -47,8 +46,11 @@ Documentation = "http://sphinx-rust.readthedocs.io"
 
 [project.optional-dependencies]
 dev = [
-  "pytest",
   "ipython"
+]
+test = [
+  "pytest",
+  "defusedxml",
 ]
 docs = [
   "furo",
@@ -110,6 +112,16 @@ passenv = TERM
 allowlist_externals = bash
 commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
 commands = {posargs:ipython}
+
+[testenv:test-{py39,py310,py311,py312}]
+extras = test
+passenv = TERM
+; ensure that the compilation is up-to-date
+; There is an issue with mixing maturin with tox-conda, raising:
+; Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
+allowlist_externals = bash
+commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
+commands = pytest {posargs}
 
 [testenv:docs]
 extras = docs

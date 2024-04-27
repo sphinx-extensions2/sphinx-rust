@@ -56,7 +56,7 @@ jobs:
       #     set -e
       #     pip install --upgrade pip
       #     pip install sphinx_rust --find-links dist --force-reinstall
-      #     pip install pytest pytest-param-files
+      #     pip install pytest
       #     pytest
       # - name: pytest
       #   if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
@@ -68,7 +68,7 @@ jobs:
       #     install: |
       #       apt-get update
       #       apt-get install -y --no-install-recommends python3-dev python3-pip build-essential
-      #       pip3 install -U pip pytest pytest-param-files
+      #       pip3 install -U pip pytest
       #     run: |
       #       set -e
       #       pip3 install sphinx_rust --find-links dist --force-reinstall
@@ -104,7 +104,7 @@ jobs:
       #     set -e
       #     pip install --upgrade pip
       #     pip install sphinx_rust --find-links dist --force-reinstall
-      #     pip install pytest pytest-param-files
+      #     pip install pytest
       #     pytest
 
   macos:
@@ -136,7 +136,7 @@ jobs:
       #     set -e
       #     pip install --upgrade pip
       #     pip install sphinx_rust --find-links dist --force-reinstall
-      #     pip install pytest pytest-param-files
+      #     pip install pytest
       #     pytest
 
   sdist:
