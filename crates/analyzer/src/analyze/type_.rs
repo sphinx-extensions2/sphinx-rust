@@ -212,7 +212,7 @@ mod tests {
         let result = convert_type(&ty);
         assert_yaml_snapshot!(result, @r###"
         ---
-        - Path: "std :: collections :: HashMap < u8 , u16 >"
+        - Path: "std::collections::HashMap<u8 , u16>"
         "###);
     }
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from docutils import nodes
 from sphinx import addnodes
 from sphinx.util.logging import getLogger
@@ -14,9 +12,6 @@ from ._core import (
     create_field_list,
     parse_docstring,
 )
-
-if TYPE_CHECKING:
-    pass
 
 LOGGER = getLogger(__name__)
 
@@ -54,33 +49,31 @@ class RustEnumAutoDirective(RustAutoDirective):
         desc = addnodes.desc()
         root += desc
         if enum.variants:
-            sig_lines = [
-                addnodes.desc_signature_line(
-                    "", f'pub struct {enum.name.split("::")[-1]} {{'
-                )
-            ]
+            sig_lines = [addnodes.desc_signature_line("", f"pub struct {enum.name} {{")]
             for var in enum.variants:
                 # TODO types
                 sig_lines.append(  # noqa: PERF401
-                    addnodes.desc_signature_line("", f"    {var.name}(...),")
+                    addnodes.desc_signature_line(
+                        "", f"    {var.name}(...),"
+                    )  # TODO properly print variant
                 )
             sig_lines.append(addnodes.desc_signature_line("", "}"))
-            signature = addnodes.desc_signature(enum.name, "", *sig_lines)
+            signature = addnodes.desc_signature(enum.path_str, "", *sig_lines)
             signature["is_multiline"] = True
         else:
             signature = addnodes.desc_signature(
-                enum.name, f'pub enum {enum.name.split("::")[-1]} {{}}'
+                enum.path_str, f"pub enum {enum.name} {{}}"
             )
         desc += signature
         # TODO add variants to signature
         # desc += addnodes.desc_content("", nodes.paragraph("", ))
-        node_id = make_id(self.env, self.doc, "", enum.name)
+        node_id = make_id(self.env, self.doc, "", enum.path_str)
         signature["ids"].append(node_id)
         self.doc.note_explicit_target(signature)
-        self.rust_domain.note_object(enum.name, "enum", node_id, signature)
+        self.rust_domain.note_object(enum.path_str, "enum", node_id, signature)
 
         if enum.docstring:
-            root += parse_docstring(self.env, self.doc, enum.docstring)
+            root += parse_docstring(self.env, self.doc, enum)
 
         if enum.variants:
             section = self.create_section("Variants")
@@ -90,7 +83,7 @@ class RustEnumAutoDirective(RustAutoDirective):
                 [
                     (
                         [nodes.Text(var.name)],
-                        parse_docstring(self.env, self.doc, var.docstring),
+                        parse_docstring(self.env, self.doc, var),
                     )
                     for var in enum.variants
                 ]

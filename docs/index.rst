@@ -97,6 +97,7 @@ Contents
 .. toctree::
     :caption: Integrations
 
+    integrations/myst
     integrations/needs
 
 .. toctree::

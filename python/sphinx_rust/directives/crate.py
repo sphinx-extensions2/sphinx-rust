@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.util.logging import getLogger
+from sphinx.util.nodes import make_id
 
 from sphinx_rust.sphinx_rust import load_crate, load_enums, load_modules, load_structs
 
@@ -54,8 +56,18 @@ class RustCrateAutoDirective(RustAutoDirective):
         root += create_field_list(
             [([nodes.Text("Version")], [nodes.Text(crate.version)])]
         )
+
+        desc = addnodes.desc()
+        root += desc
+        signature = addnodes.desc_signature(crate.path_str, f"pub mod {crate.name};")
+        desc += signature
+        node_id = make_id(self.env, self.doc, "", crate.path_str)
+        signature["ids"].append(node_id)
+        self.doc.note_explicit_target(signature)
+        self.rust_domain.note_object(crate.path_str, "crate", node_id, signature)
+
         if crate.docstring:
-            root += parse_docstring(self.env, self.doc, crate.docstring)
+            root += parse_docstring(self.env, self.doc, crate)
 
         items: list[Module | Struct | Enum]
         objtype: ObjType
@@ -73,17 +85,20 @@ class RustCrateAutoDirective(RustAutoDirective):
                             nodes.paragraph(
                                 "",
                                 "",
-                                create_xref(self.env.docname, item.name, objtype),
+                                create_xref(self.env.docname, item.path_str, objtype),
                             )
                         ],
                         parse_docstring(
                             self.env,
                             self.doc,
+                            item,
                             # TODO the first line should only be a paragraph
-                            item.docstring.splitlines()[0] if item.docstring else r"\-",
+                            docstring=item.docstring.splitlines()[0]
+                            if item.docstring
+                            else r"\-",
                         ),
                     )
-                    for item in sorted(items, key=lambda m: m.name)
+                    for item in sorted(items, key=lambda m: m.path_str)
                 ]
                 section += create_summary_table(rows)  # type: ignore[arg-type]
 

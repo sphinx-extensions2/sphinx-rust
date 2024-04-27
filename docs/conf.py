@@ -18,6 +18,10 @@ rust_crates = [
     "../crates/analyzer",
     "../crates/py_binding",
 ]
+rust_doc_formats = {
+    "analyzer": "restructuredtext",
+    "sphinx_rust": "markdown",
+}
 
 intersphinx_mapping = {
     "sphinx": ("https://www.sphinx-doc.org", None),

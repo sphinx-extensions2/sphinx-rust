@@ -55,18 +55,15 @@ class RustModuleAutoDirective(RustAutoDirective):
 
         desc = addnodes.desc()
         root += desc
-        signature = addnodes.desc_signature(
-            module.name, f'pub mod {module.name.split("::")[-1]};'
-        )
+        signature = addnodes.desc_signature(module.path_str, f"pub mod {module.name};")
         desc += signature
-        # desc += addnodes.desc_content("", nodes.paragraph("", ))
-        node_id = make_id(self.env, self.doc, "", module.name)
+        node_id = make_id(self.env, self.doc, "", module.path_str)
         signature["ids"].append(node_id)
         self.doc.note_explicit_target(signature)
-        self.rust_domain.note_object(module.name, "module", node_id, signature)
+        self.rust_domain.note_object(module.path_str, "module", node_id, signature)
 
         if module.docstring:
-            root += parse_docstring(self.env, self.doc, module.docstring)
+            root += parse_docstring(self.env, self.doc, module)
 
         items: list[Module | Struct | Enum]
         objtype: ObjType
@@ -84,17 +81,20 @@ class RustModuleAutoDirective(RustAutoDirective):
                             nodes.paragraph(
                                 "",
                                 "",
-                                create_xref(self.env.docname, item.name, objtype),
+                                create_xref(self.env.docname, item.path_str, objtype),
                             )
                         ],
                         parse_docstring(
                             self.env,
                             self.doc,
+                            item,
                             # TODO the first line should only be a paragraph
-                            item.docstring.splitlines()[0] if item.docstring else r"\-",
+                            docstring=item.docstring.splitlines()[0]
+                            if item.docstring
+                            else r"\-",
                         ),
                     )
-                    for item in sorted(items, key=lambda m: m.name)
+                    for item in sorted(items, key=lambda m: m.path_str)
                 ]
                 section += create_summary_table(rows)  # type: ignore[arg-type]
 

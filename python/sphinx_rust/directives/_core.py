@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from docutils import nodes, utils
 from sphinx import addnodes
+from sphinx.errors import SphinxError
 from sphinx.util.docutils import LoggingReporter, SphinxDirective
 from sphinx.util.logging import getLogger
+
+from sphinx_rust.config import RustConfig
 
 if TYPE_CHECKING:
     from sphinx.environment import BuildEnvironment
@@ -55,7 +58,7 @@ class RustAutoDirective(SphinxDirective):
                 type="rust",
                 subtype="root",
             )
-        return self.state_machine.match_titles  # type: ignore[no-any-return]
+        return not self.state_machine.match_titles
 
     def create_section(self, title: str) -> nodes.section:
         """Create a new section node."""
@@ -100,15 +103,45 @@ def create_summary_table(
     return table
 
 
+class DocstringItem(Protocol):
+    """An item with a docstring."""
+
+    path: list[str]
+    """Fully qualified name of the item."""
+    path_str: str
+    """Fully qualified name of the item."""
+    docstring: str
+    """The docstring of the item."""
+
+
 def parse_docstring(
     env: BuildEnvironment,
     doc: nodes.document,
-    docstring: str,
+    item: DocstringItem,
     /,
     *,
-    filetype: str = "restructuredtext",
+    docstring: str | None = None,
 ) -> list[nodes.Node]:
-    """parse into a dummy document and return created nodes."""
+    """parse into a dummy document and return created nodes.
+
+    :param env: The build environment.
+    :param doc: The parent document.
+    :param item: The item to parse.
+    :param docstring: If not ``None`` then use this as the docstring, rather than the items.
+    """
+    config = RustConfig.from_app(env.app)
+    parser_type = config.rust_doc_formats.get(item.path[0], "restructuredtext")
+    try:
+        parser = env.app.registry.create_source_parser(env.app, parser_type)
+    except SphinxError as e:
+        LOGGER.warning(
+            f"Error creating docstring parser for {item.path_str!r}: {e!s}",
+            type="rust",
+            subtype="parser",
+        )
+        return []
+
+    docstring = item.docstring if docstring is None else docstring
     source_path = env.doc2path(  # TODO this actually should be the rust file path
         env.docname
     )
@@ -117,7 +150,7 @@ def parse_docstring(
     document.reporter = LoggingReporter.from_reporter(doc.reporter)
     document.reporter.source = source_path
     # TODO cache parser creation
-    parser = env.app.registry.create_source_parser(env.app, filetype)
+
     parser.parse(docstring, document)
     # TODO merge document metadata with parent document, e.g. targets etc?
     # or docutils.Include actually runs the transforms on the included document, before returning its children
@@ -125,19 +158,23 @@ def parse_docstring(
 
 
 def create_xref(
-    docname: str, ident: str, objtype: ObjType, *, warn_dangling: bool = False
+    docname: str, path: str, objtype: ObjType, *, warn_dangling: bool = False
 ) -> addnodes.pending_xref:
-    """Create a cross-reference node."""
+    """Create a cross-reference node.
+
+    :param docname: The document name.
+    :param path: The fully qualified path to the object, e.g. ``crate::module::Item``.
+    """
     options = {
         "refdoc": docname,
         "refdomain": "rust",
         "reftype": objtype,
         "refexplicit": True,
         "refwarn": warn_dangling,
-        "reftarget": ident,
+        "reftarget": path,
     }
-    ref = addnodes.pending_xref(ident, **options)
-    name = ident.split("::")[-1]
+    ref = addnodes.pending_xref(path, **options)
+    name = path.split("::")[-1]
     ref += nodes.literal(name, name)
 
     return ref
