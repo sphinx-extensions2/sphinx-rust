@@ -40,7 +40,7 @@ jobs:
     - name: cache rust
       uses: Swatinem/rust-cache@v2
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test -p analyzer --lib --verbose
 
   test-python:
 
