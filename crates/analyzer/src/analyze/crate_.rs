@@ -5,11 +5,13 @@ use serde::{Deserialize, Serialize};
 use super::{Enum, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
+    // make the path absolute
+    let path =
+        std::fs::canonicalize(path).context(format!("Error resolving crate path: {}", path))?;
     // check the path is a directory
-    let path = std::path::Path::new(path);
     if !path.is_dir() {
         return Err(anyhow::anyhow!(format!(
-            "Path is not a directory: {}",
+            "Crate path is not a directory: {}",
             path.to_string_lossy()
         )));
     }
@@ -73,10 +75,11 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
     // read the top-level module
     let content = std::fs::read_to_string(&root_file)?;
-    let (module, structs, enums) = Module::parse(&[&crate_.name], &content).context(format!(
-        "Error parsing module {}",
-        root_file.to_string_lossy()
-    ))?;
+    let (module, structs, enums) = Module::parse(Some(&root_file), &[&crate_.name], &content)
+        .context(format!(
+            "Error parsing module {}",
+            root_file.to_string_lossy()
+        ))?;
     result_.crate_.docstring = module.docstring.clone();
     let mut modules_to_read = module
         .declarations
@@ -119,6 +122,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         let content = std::fs::read_to_string(&module_path)?;
         let path: Vec<String> = [&parent[..], &[module_name]].concat();
         let (module, structs, enums) = Module::parse(
+            Some(&module_path),
             &path.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
             &content,
         )
@@ -256,22 +260,29 @@ mod tests {
         )?;
 
         // Analyze the dummy crate
-        let crate_ = analyze_crate(temp_dir_path.to_str().unwrap())?;
+        let mut result = analyze_crate(temp_dir_path.to_str().unwrap())?;
 
-        assert_yaml_snapshot!(crate_, @r###"
+        // Remove the file paths for snapshot testing, as they are non-deterministic
+        for module in result.modules.iter_mut() {
+            module.file = None;
+        }
+
+        assert_yaml_snapshot!(result, @r###"
         ---
         crate_:
           name: my_crate
           version: 0.1.0
           docstring: The crate docstring
         modules:
-          - path:
+          - file: ~
+            path:
               - my_crate
               - my_module
             docstring: The module docstring
             declarations:
               - my_submodule
-          - path:
+          - file: ~
+            path:
               - my_crate
               - my_module
               - my_submodule
