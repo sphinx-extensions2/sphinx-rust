@@ -44,6 +44,8 @@ impl From<analyze::Crate> for Crate {
 /// pyo3 representation of a module
 pub struct Module {
     #[pyo3(get)]
+    pub file: Option<String>,
+    #[pyo3(get)]
     pub path: Vec<String>,
     #[pyo3(get)]
     pub docstring: String,
@@ -67,6 +69,7 @@ impl Module {
 impl From<analyze::Module> for Module {
     fn from(module: analyze::Module) -> Self {
         Module {
+            file: module.file,
             path: module.path,
             docstring: module.docstring,
         }

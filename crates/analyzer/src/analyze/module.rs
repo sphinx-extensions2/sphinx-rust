@@ -1,4 +1,6 @@
 //! Analyze modules
+use std::path::Path;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use syn::parse_file;
@@ -13,6 +15,8 @@ use super::{docstring_from_attrs, enum_::Enum, struct_::Struct};
 ///     :tags: rust
 ///     :status: in-progress
 pub struct Module {
+    /// The path to the module file
+    pub file: Option<String>,
     /// The fully qualified name of the module
     pub path: Vec<String>,
     pub docstring: String,
@@ -26,9 +30,14 @@ impl Module {
         self.path.join("::")
     }
     /// Extract the relevant information from the AST
-    pub fn parse(path: &[&str], content: &str) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
+    pub fn parse(
+        file: Option<&Path>,
+        path: &[&str],
+        content: &str,
+    ) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
         let syntax = parse_file(content)?;
         let mut mod_ = Self {
+            file: file.map(|f| f.to_string_lossy().to_string()), // TODO better way to serialize the path, also ?
             path: path.iter().map(|s| s.to_string()).collect(),
             docstring: docstring_from_attrs(&syntax.attrs),
             declarations: vec![],
@@ -76,7 +85,7 @@ mod tests {
     use insta::assert_yaml_snapshot;
 
     #[test]
-    fn test_parse_enum() {
+    fn test_parse_module() {
         let content = r###"
 //! Multi-line
 //! docstring
@@ -85,10 +94,11 @@ pub enum MyEnum {
     MyVariant1,
 }
 "###;
-        let mod_ = Module::parse(&["test"], content).unwrap();
+        let mod_ = Module::parse(None, &["test"], content).unwrap();
         assert_yaml_snapshot!(mod_, @r###"
         ---
-        - path:
+        - file: ~
+          path:
             - test
           docstring: "Multi-line\ndocstring"
           declarations: []

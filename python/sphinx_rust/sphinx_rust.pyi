@@ -89,6 +89,8 @@ class Crate:
 class Module:
     """Representation of a module."""
 
+    file: str | None
+    """The absolute path to the file containing the module."""
     name: str
     """The name of the module."""
     path: list[str]
