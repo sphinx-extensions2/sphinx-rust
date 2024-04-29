@@ -46,7 +46,6 @@ Add `sphinx_rust` to your `conf.py`, and specifiy the paths to the Rust crates y
         "../path/to/crate",
         ...
     ]
-    rust_viewcode = True  # Optional: add "View Source" links
     ...
 
 Now add a `toctree` in your `index.rst`, to point towards the generated documentation for each crate

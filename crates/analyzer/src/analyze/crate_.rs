@@ -6,8 +6,9 @@ use super::{Enum, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // make the path absolute
+    // TODO we use dunce to canonicalize the path because otherwise there is issues with python's os.path.relpath on windows, but maybe we should fix this on the Python side
     let path =
-        std::fs::canonicalize(path).context(format!("Error resolving crate path: {}", path))?;
+        dunce::canonicalize(path).context(format!("Error resolving crate path: {}", path))?;
     // check the path is a directory
     if !path.is_dir() {
         return Err(anyhow::anyhow!(format!(

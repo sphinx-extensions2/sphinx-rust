@@ -14,6 +14,7 @@ readme = "../../README.md"
 
 [dependencies]
 anyhow.workspace = true
+dunce.workspace = true
 quote.workspace = true
 serde.workspace = true
 serde_json.workspace = true

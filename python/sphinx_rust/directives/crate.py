@@ -75,12 +75,11 @@ class RustCrateAutoDirective(RustAutoDirective):
         self.rust_domain.note_object(crate.name, "crate", node_id, signature)
 
         if self.rust_config.rust_viewcode and crate_mod and crate_mod.file:
-            root += nodes.paragraph(
-                "",
-                "",
-                create_source_xref(
-                    self.env.docname, crate_mod.path_str, text="[View Source]"
-                ),
+            signature += create_source_xref(
+                self.env.docname,
+                crate_mod.path_str,
+                text="[source]",
+                classes=["viewcode-link"],
             )
 
         if crate_mod and crate_mod.docstring:
