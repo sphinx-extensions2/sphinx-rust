@@ -190,6 +190,7 @@ def create_source_xref(
     *,
     warn_dangling: bool = False,
     text: str | None = None,
+    classes: list[str] | None = None,
 ) -> addnodes.pending_xref:
     """Create a cross-reference node to the source-code of a rust object.
 
@@ -203,6 +204,7 @@ def create_source_xref(
         "refexplicit": True,
         "refwarn": warn_dangling,
         "reftarget": f"rust-code:{full_name}",
+        "classes": classes or [],
     }
     ref = addnodes.pending_xref(full_name, **options)
     text = full_name.split("::")[-1] if text is None else text

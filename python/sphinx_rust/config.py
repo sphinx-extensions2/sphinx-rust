@@ -29,4 +29,4 @@ class RustConfig:
         """Add the configuration values for the Rust domain."""
         app.add_config_value("rust_crates", [], "env")
         app.add_config_value("rust_doc_formats", {}, "env")
-        app.add_config_value("rust_viewcode", False, "env")
+        app.add_config_value("rust_viewcode", True, "env")

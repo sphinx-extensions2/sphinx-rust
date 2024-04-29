@@ -64,12 +64,11 @@ class RustModuleAutoDirective(RustAutoDirective):
         self.rust_domain.note_object(module.path_str, "module", node_id, signature)
 
         if self.rust_config.rust_viewcode and module and module.file:
-            root += nodes.paragraph(
-                "",
-                "",
-                create_source_xref(
-                    self.env.docname, module.path_str, text="[View Source]"
-                ),
+            signature += create_source_xref(
+                self.env.docname,
+                module.path_str,
+                text="[source]",
+                classes=["viewcode-link"],
             )
 
         if module.docstring:
