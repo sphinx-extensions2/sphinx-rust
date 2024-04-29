@@ -10,8 +10,6 @@ pub struct Crate {
     pub name: String,
     #[pyo3(get)]
     pub version: String,
-    #[pyo3(get)]
-    pub docstring: String,
 }
 
 #[pymethods]
@@ -34,7 +32,6 @@ impl From<analyze::Crate> for Crate {
         Crate {
             name: crate_.name,
             version: crate_.version,
-            docstring: crate_.docstring,
         }
     }
 }

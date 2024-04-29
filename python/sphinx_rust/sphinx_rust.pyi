@@ -10,7 +10,7 @@ def analyze_crate(crate_path: str, cache_path: str) -> AnalysisResult:
     :raises IOError: If the analysis fails.
     """
 
-def load_crate(cache_path: str, name: str) -> Crate | None:
+def load_crate(cache_path: str, name: str, /) -> Crate | None:
     """Load a crate from the cache, it it exists.
 
     :param cache_path: The path to the cache directory.
@@ -18,51 +18,54 @@ def load_crate(cache_path: str, name: str) -> Crate | None:
     :raises IOError: If the load fails.
     """
 
-def load_module(cache_path: str, name: str) -> Module | None:
+def load_module(cache_path: str, full_name: str, /) -> Module | None:
     """Load a module from the cache, it it exists.
 
     :param cache_path: The path to the cache directory.
-    :param name: The fully qualified name of the module to load.
+    :param name: The fully qualified name of the module to load, e.g. ``a::b::c``.
     :raises IOError: If the load fails.
     """
 
-def load_struct(cache_path: str, name: str) -> Struct | None:
+def load_struct(cache_path: str, full_name: str, /) -> Struct | None:
     """Load a struct from the cache, it it exists.
 
     :param cache_path: The path to the cache directory.
-    :param name: The fully qualified name of the struct to load.
+    :param name: The fully qualified name of the struct to load, e.g. ``a::b::c``.
     :raises IOError: If the load fails.
     """
 
-def load_enum(cache_path: str, name: str) -> Enum | None:
+def load_enum(cache_path: str, full_name: str, /) -> Enum | None:
     """Load an enum from the cache, it it exists.
 
     :param cache_path: The path to the cache directory.
-    :param name: The fully qualified name of the enum to load.
+    :param full_name: The fully qualified name of the enum to load, e.g. ``a::b::c``.
     :raises IOError: If the load fails.
     """
 
-def load_modules(cache_path: str, prefix: str) -> list[Module]:
-    """Load all modules from the cache, whose fully qualified name begins with the prefix.
+def load_modules(
+    cache_path: str, ancestor: list[str], include_self: bool, /
+) -> list[Module]:
+    """Load all modules from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param prefix: The fully qualified name prefix of the modules to load.
+    :param ancestor: The fully qualified path of the ancestor.
+    :param include_self: Whether to include the ancestor in the results.
     :raises IOError: If the load fails.
     """
 
-def load_structs(cache_path: str, prefix: str) -> list[Struct]:
-    """Load all structs from the cache, whose fully qualified name begins with the prefix.
+def load_structs(cache_path: str, ancestor: list[str], /) -> list[Struct]:
+    """Load all structs from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param prefix: The fully qualified name prefix of the structs to load.
+    :param ancestor: The fully qualified path of the ancestor.
     :raises IOError: If the load fails.
     """
 
-def load_enums(cache_path: str, prefix: str) -> list[Enum]:
-    """Load all enums from the cache, whose fully qualified name begins with the prefix.
+def load_enums(cache_path: str, ancestor: list[str], /) -> list[Enum]:
+    """Load all enums from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param prefix: The fully qualified name prefix of the enums to load.
+    :param ancestor: The fully qualified path of the ancestor.
     :raises IOError: If the load fails.
     """
 
@@ -79,12 +82,8 @@ class Crate:
 
     name: str
     """The name of the crate."""
-    path: list[str]
-    """The fully qualified path"""
-    path_str: str
-    """The fully qualified name as a string, e.g. ``a::b::c``"""
     version: str
-    docstring: str
+    """The version of the crate."""
 
 class Module:
     """Representation of a module."""

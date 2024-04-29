@@ -19,6 +19,8 @@ def test_basic(make_app: type[SphinxTestApp], tmp_path: Path) -> None:
     [lib]
     """)
     )
+    tmp_path.joinpath("src").mkdir()
+    tmp_path.joinpath("src", "lib.rs").write_text("//! Test library.")
     tmp_path.joinpath("conf.py").write_text(
         dedent("""\
     extensions = ['sphinx_rust']

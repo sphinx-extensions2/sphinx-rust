@@ -55,45 +55,44 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         )));
     };
 
-    let crate_ = Crate {
-        name: crate_name,
-        version: cargo_toml.package.version.clone(),
-        docstring: "".to_string(),
-    };
-    let mut result_ = AnalysisResult {
-        crate_: crate_.clone(),
+    let mut result = AnalysisResult {
+        crate_: Crate {
+            name: crate_name,
+            version: cargo_toml.package.version.clone(),
+        },
         modules: vec![],
         structs: vec![],
         enums: vec![],
     };
 
-    // read the src/lib directory
-    let root_file = path.join(to_root);
-    if !root_file.exists() {
-        return Ok(result_);
+    // check existence of the root module
+    let root_module = path.join(to_root);
+    if !root_module.exists() {
+        return Ok(result);
     }
 
     // read the top-level module
-    let content = std::fs::read_to_string(&root_file)?;
-    let (module, structs, enums) = Module::parse(Some(&root_file), &[&crate_.name], &content)
-        .context(format!(
+    let content = std::fs::read_to_string(&root_module)?;
+    let (module, structs, enums) =
+        Module::parse(Some(&root_module), &[&result.crate_.name], &content).context(format!(
             "Error parsing module {}",
-            root_file.to_string_lossy()
+            root_module.to_string_lossy()
         ))?;
-    result_.crate_.docstring = module.docstring.clone();
     let mut modules_to_read = module
         .declarations
         .iter()
         .map(|s| {
             (
-                root_file.parent().unwrap().to_path_buf(),
+                root_module.parent().unwrap().to_path_buf(),
                 s.to_string(),
-                vec![crate_.name.clone()],
+                vec![result.crate_.name.clone()],
             )
         })
         .collect::<Vec<_>>();
-    result_.structs.extend(structs);
-    result_.enums.extend(enums);
+
+    result.modules.push(module);
+    result.structs.extend(structs);
+    result.enums.extend(enums);
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
@@ -137,12 +136,12 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
                 .map(|s| (submodule_dir.clone(), s.to_string(), path.clone()))
                 .collect::<Vec<_>>(),
         );
-        result_.modules.push(module);
-        result_.structs.extend(structs);
-        result_.enums.extend(enums);
+        result.modules.push(module);
+        result.structs.extend(structs);
+        result.enums.extend(enums);
     }
 
-    Ok(result_)
+    Ok(result)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -164,7 +163,6 @@ pub struct AnalysisResult {
 pub struct Crate {
     pub name: String,
     pub version: String,
-    pub docstring: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -272,8 +270,13 @@ mod tests {
         crate_:
           name: my_crate
           version: 0.1.0
-          docstring: The crate docstring
         modules:
+          - file: ~
+            path:
+              - my_crate
+            docstring: The crate docstring
+            declarations:
+              - my_module
           - file: ~
             path:
               - my_crate

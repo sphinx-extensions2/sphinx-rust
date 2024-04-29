@@ -186,52 +186,61 @@ pub fn load_crate(cache_path: &str, name: &str) -> PyResult<Option<Crate>> {
 
 #[pyfunction]
 /// load a module from the cache, if it exists
-pub fn load_module(cache_path: &str, name: &str) -> PyResult<Option<Module>> {
+pub fn load_module(cache_path: &str, full_name: &str) -> PyResult<Option<Module>> {
     let path = std::path::Path::new(cache_path)
         .join("modules")
-        .join(format!("{}.json", name));
+        .join(format!("{}.json", full_name));
     if !path.exists() {
         return Ok(None);
     }
     let contents = read_file(&path)?;
-    let mod_: analyze::Module = deserialize_object(name, &contents)?;
+    let mod_: analyze::Module = deserialize_object(full_name, &contents)?;
     Ok(Some(mod_.into()))
 }
 
 #[pyfunction]
 /// load a struct from the cache, if it exists
-pub fn load_struct(cache_path: &str, name: &str) -> PyResult<Option<Struct>> {
+pub fn load_struct(cache_path: &str, full_name: &str) -> PyResult<Option<Struct>> {
     let path = std::path::Path::new(cache_path)
         .join("structs")
-        .join(format!("{}.json", name));
+        .join(format!("{}.json", full_name));
     if !path.exists() {
         return Ok(None);
     }
     let contents = read_file(&path)?;
-    let struct_: analyze::Struct = deserialize_object(name, &contents)?;
+    let struct_: analyze::Struct = deserialize_object(full_name, &contents)?;
     Ok(Some(struct_.into()))
 }
 
 #[pyfunction]
 /// load an enum from the cache, if it exists
-pub fn load_enum(cache_path: &str, name: &str) -> PyResult<Option<Enum>> {
+pub fn load_enum(cache_path: &str, full_name: &str) -> PyResult<Option<Enum>> {
     let path = std::path::Path::new(cache_path)
         .join("enums")
-        .join(format!("{}.json", name));
+        .join(format!("{}.json", full_name));
     if !path.exists() {
         return Ok(None);
     }
     let contents = read_file(&path)?;
-    let enum_: analyze::Enum = deserialize_object(name, &contents)?;
+    let enum_: analyze::Enum = deserialize_object(full_name, &contents)?;
     Ok(Some(enum_.into()))
 }
 
 #[pyfunction]
-/// load all modules from the cache that begin with the given prefix
-pub fn load_modules(cache_path: &str, prefix: &str) -> PyResult<Vec<Module>> {
+/// load all modules from the cache that have a common ancestor
+pub fn load_modules(
+    cache_path: &str,
+    ancestor: Vec<String>,
+    include_self: bool,
+) -> PyResult<Vec<Module>> {
     let path = std::path::Path::new(cache_path).join("modules");
     if !path.exists() {
         return Ok(vec![]);
+    }
+    let ancestor_name = ancestor.join("::");
+    let mut prefix = ancestor.join("::");
+    if !prefix.is_empty() {
+        prefix.push_str("::");
     }
     let mut modules = vec![];
     for entry in std::fs::read_dir(path)? {
@@ -246,7 +255,7 @@ pub fn load_modules(cache_path: &str, prefix: &str) -> PyResult<Vec<Module>> {
                 Some(name) => name,
                 None => continue,
             };
-            if !name.starts_with(prefix) {
+            if !(name.starts_with(&prefix) || (include_self && name == &ancestor_name)) {
                 continue;
             }
             let contents = read_file(&path)?;
@@ -258,11 +267,15 @@ pub fn load_modules(cache_path: &str, prefix: &str) -> PyResult<Vec<Module>> {
 }
 
 #[pyfunction]
-/// load all structs from the cache that begin with the given prefix
-pub fn load_structs(cache_path: &str, prefix: &str) -> PyResult<Vec<Struct>> {
+/// load all structs from the cache that have a common ancestor
+pub fn load_structs(cache_path: &str, ancestor: Vec<String>) -> PyResult<Vec<Struct>> {
     let path = std::path::Path::new(cache_path).join("structs");
     if !path.exists() {
         return Ok(vec![]);
+    }
+    let mut prefix = ancestor.join("::");
+    if !prefix.is_empty() {
+        prefix.push_str("::");
     }
     let mut structs = vec![];
     for entry in std::fs::read_dir(path)? {
@@ -277,7 +290,7 @@ pub fn load_structs(cache_path: &str, prefix: &str) -> PyResult<Vec<Struct>> {
                 Some(name) => name,
                 None => continue,
             };
-            if !name.starts_with(prefix) {
+            if !name.starts_with(&prefix) {
                 continue;
             }
             let contents = read_file(&path)?;
@@ -289,11 +302,15 @@ pub fn load_structs(cache_path: &str, prefix: &str) -> PyResult<Vec<Struct>> {
 }
 
 #[pyfunction]
-/// load all enums from the cache that begin with the given prefix
-pub fn load_enums(cache_path: &str, prefix: &str) -> PyResult<Vec<Enum>> {
+/// load all enums from the cache that that have a common ancestor
+pub fn load_enums(cache_path: &str, ancestor: Vec<String>) -> PyResult<Vec<Enum>> {
     let path = std::path::Path::new(cache_path).join("enums");
     if !path.exists() {
         return Ok(vec![]);
+    }
+    let mut prefix = ancestor.join("::");
+    if !prefix.is_empty() {
+        prefix.push_str("::");
     }
     let mut enums = vec![];
     for entry in std::fs::read_dir(path)? {
@@ -308,7 +325,7 @@ pub fn load_enums(cache_path: &str, prefix: &str) -> PyResult<Vec<Enum>> {
                 Some(name) => name,
                 None => continue,
             };
-            if !name.starts_with(prefix) {
+            if !name.starts_with(&prefix) {
                 continue;
             }
             let contents = read_file(&path)?;
