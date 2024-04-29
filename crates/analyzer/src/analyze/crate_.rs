@@ -2,7 +2,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::{Enum, Module, Struct};
+use crate::data_model::{Crate, Enum, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // make the path absolute
@@ -152,18 +152,6 @@ pub struct AnalysisResult {
     pub modules: Vec<Module>,
     pub structs: Vec<Struct>,
     pub enums: Vec<Enum>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a crate
-///
-/// .. req:: Represent a crate
-///     :id: RUST006
-///     :tags: rust
-///     :status: in-progress
-pub struct Crate {
-    pub name: String,
-    pub version: String,
 }
 
 #[derive(Debug, Deserialize)]

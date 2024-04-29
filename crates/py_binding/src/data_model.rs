@@ -1,6 +1,8 @@
+//! Mapping of the analyzer data model to pyo3 classes
+
 use pyo3::prelude::*;
 
-use analyzer::analyze;
+use analyzer::data_model;
 
 #[pyclass]
 #[derive(Clone)]
@@ -27,8 +29,8 @@ impl Crate {
     }
 }
 
-impl From<analyze::Crate> for Crate {
-    fn from(crate_: analyze::Crate) -> Self {
+impl From<data_model::Crate> for Crate {
+    fn from(crate_: data_model::Crate) -> Self {
         Crate {
             name: crate_.name,
             version: crate_.version,
@@ -63,8 +65,8 @@ impl Module {
     }
 }
 
-impl From<analyze::Module> for Module {
-    fn from(module: analyze::Module) -> Self {
+impl From<data_model::Module> for Module {
+    fn from(module: data_model::Module) -> Self {
         Module {
             file: module.file,
             path: module.path,
@@ -100,8 +102,8 @@ impl Field {
     }
 }
 
-impl From<analyze::Field> for Field {
-    fn from(field: analyze::Field) -> Self {
+impl From<data_model::Field> for Field {
+    fn from(field: data_model::Field) -> Self {
         Field {
             path: field.path,
             docstring: field.docstring,
@@ -137,8 +139,8 @@ impl Struct {
     }
 }
 
-impl From<analyze::Struct> for Struct {
-    fn from(module: analyze::Struct) -> Self {
+impl From<data_model::Struct> for Struct {
+    fn from(module: data_model::Struct) -> Self {
         Struct {
             path: module.path,
             docstring: module.docstring,
@@ -174,8 +176,8 @@ impl Enum {
     }
 }
 
-impl From<analyze::Enum> for Enum {
-    fn from(module: analyze::Enum) -> Self {
+impl From<data_model::Enum> for Enum {
+    fn from(module: data_model::Enum) -> Self {
         Enum {
             path: module.path,
             docstring: module.docstring,
@@ -212,8 +214,8 @@ impl Variant {
     }
 }
 
-impl From<analyze::Variant> for Variant {
-    fn from(var: analyze::Variant) -> Self {
+impl From<data_model::Variant> for Variant {
+    fn from(var: data_model::Variant) -> Self {
         Variant {
             path: var.path,
             docstring: var.docstring,
@@ -244,14 +246,14 @@ impl TypeSegment {
     }
 }
 
-impl From<analyze::TypeSegment> for TypeSegment {
-    fn from(field: analyze::TypeSegment) -> Self {
+impl From<data_model::TypeSegment> for TypeSegment {
+    fn from(field: data_model::TypeSegment) -> Self {
         match field {
-            analyze::TypeSegment::Path(content) => TypeSegment {
+            data_model::TypeSegment::Path(content) => TypeSegment {
                 content,
                 is_path: true,
             },
-            analyze::TypeSegment::String(content) => TypeSegment {
+            data_model::TypeSegment::String(content) => TypeSegment {
                 content,
                 is_path: false,
             },

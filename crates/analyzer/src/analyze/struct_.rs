@@ -1,26 +1,9 @@
 //! Analyze structs
-use serde::{Deserialize, Serialize};
 use syn::{ItemStruct, Visibility};
 
-use super::{
-    docstring_from_attrs,
-    type_::{convert_type, TypeSegment},
-};
+use crate::data_model::{Field, Struct};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a Struct
-///
-/// .. req:: Represent a struct
-///     :id: RUST004
-///     :tags: rust
-///     :status: in-progress
-pub struct Struct {
-    /// The fully qualified name of the struct
-    pub path: Vec<String>,
-    /// The docstring of the struct
-    pub docstring: String,
-    pub fields: Vec<Field>,
-}
+use super::{docstring_from_attrs, type_::convert_type};
 
 impl Struct {
     /// Fully qualified name of the variant
@@ -48,18 +31,6 @@ impl Struct {
         }
         struct_
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a Struct or Enum field
-pub struct Field {
-    /// The fully qualified name of the field.
-    ///
-    /// Note, for fields of tuple structs, the final component is the index of the field
-    pub path: Vec<String>,
-    /// The docstring of the field
-    pub docstring: String,
-    pub type_: Vec<TypeSegment>,
 }
 
 impl Field {

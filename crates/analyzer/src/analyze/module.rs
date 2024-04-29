@@ -2,27 +2,11 @@
 use std::path::Path;
 
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use syn::parse_file;
 
-use super::{docstring_from_attrs, enum_::Enum, struct_::Struct};
+use crate::data_model::{Enum, Module, Struct};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a module
-///
-/// .. req:: Represent a module
-///     :id: RUST005
-///     :tags: rust
-///     :status: in-progress
-pub struct Module {
-    /// The path to the module file
-    pub file: Option<String>,
-    /// The fully qualified name of the module
-    pub path: Vec<String>,
-    pub docstring: String,
-    /// The public declarations in the module
-    pub declarations: Vec<String>,
-}
+use super::docstring_from_attrs;
 
 impl Module {
     /// Fully qualified name of the variant

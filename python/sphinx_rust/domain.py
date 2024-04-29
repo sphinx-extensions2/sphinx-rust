@@ -22,7 +22,7 @@ from sphinx_rust.roles import (
     RustModuleXRefRole,
     RustStructXRefRole,
 )
-from sphinx_rust.sphinx_rust import analyze_crate, load_modules
+from sphinx_rust.sphinx_rust import analyze_crate, load_descendant_modules
 
 if TYPE_CHECKING:
     from docutils.nodes import Element
@@ -240,12 +240,13 @@ def create_object_pages(folder: Path, otype: str, names: list[str]) -> None:
 def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
     if modules := [
         (m.path_str, m.file)
-        for m in load_modules(str(cache), [crate_name], True)
+        for m in load_descendant_modules(str(cache), [crate_name], True)
         if m.file
     ]:
         code_folder = srcdir.joinpath("api", "crates", crate_name, "code")
         code_folder.mkdir(exist_ok=True, parents=True)
         for full_name, file_path in modules:
+            # TODO catch exceptions here, if a relative path cannot be created
             rel_path = os.path.relpath(Path(file_path), code_folder)
             # note, this is available only in Python 3.12+
             # rel_path = Path(file_path).relative_to(code_folder, walk_up=True)

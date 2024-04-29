@@ -69,8 +69,8 @@ Now you can use the `rust` cross-referencing roles to link to items in your Rust
     - :rust:enum:`analyze::type_::TypeSegment`
 
 - :rust:module:`analyzer::analyze`
-- :rust:struct:`analyzer::analyze::struct_::Struct`
-- :rust:enum:`analyzer::analyze::type_::TypeSegment`
+- :rust:struct:`analyzer::data_model::Struct`
+- :rust:enum:`analyzer::data_model::TypeSegment`
 
 Analysis CLI
 ------------

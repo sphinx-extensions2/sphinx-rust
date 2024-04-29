@@ -42,30 +42,54 @@ def load_enum(cache_path: str, full_name: str, /) -> Enum | None:
     :raises IOError: If the load fails.
     """
 
-def load_modules(
+def load_child_modules(cache_path: str, parent: list[str], /) -> list[Module]:
+    """Load all modules from the cache that are children of the given parent
+
+    :param cache_path: The path to the cache directory.
+    :param parent: The fully qualified name of the ancestor.
+    :raises IOError: If the load fails.
+    """
+
+def load_child_structs(cache_path: str, parent: list[str], /) -> list[Struct]:
+    """Load all structs from the cache that are children of the given parent
+
+    :param cache_path: The path to the cache directory.
+    :param parent: The fully qualified name of the parent.
+    :raises IOError: If the load fails.
+    """
+
+def load_child_enums(cache_path: str, parent: list[str], /) -> list[Enum]:
+    """Load all enums from the cache that are children of the given parent
+
+    :param cache_path: The path to the cache directory.
+    :param parent: The fully qualified name of the parent.
+    :raises IOError: If the load fails.
+    """
+
+def load_descendant_modules(
     cache_path: str, ancestor: list[str], include_self: bool, /
 ) -> list[Module]:
     """Load all modules from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param ancestor: The fully qualified path of the ancestor.
+    :param ancestor: The fully qualified name of the ancestor.
     :param include_self: Whether to include the ancestor in the results.
     :raises IOError: If the load fails.
     """
 
-def load_structs(cache_path: str, ancestor: list[str], /) -> list[Struct]:
+def load_descendant_structs(cache_path: str, ancestor: list[str], /) -> list[Struct]:
     """Load all structs from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param ancestor: The fully qualified path of the ancestor.
+    :param ancestor: The fully qualified name of the ancestor.
     :raises IOError: If the load fails.
     """
 
-def load_enums(cache_path: str, ancestor: list[str], /) -> list[Enum]:
+def load_descendant_enums(cache_path: str, ancestor: list[str], /) -> list[Enum]:
     """Load all enums from the cache that have a common ancestor.
 
     :param cache_path: The path to the cache directory.
-    :param ancestor: The fully qualified path of the ancestor.
+    :param ancestor: The fully qualified name of the ancestor.
     :raises IOError: If the load fails.
     """
 

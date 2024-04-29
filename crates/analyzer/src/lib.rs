@@ -9,3 +9,4 @@
 //!
 //!     We need to be able to analyze a rust package and extract the necessary information from it.
 pub mod analyze;
+pub mod data_model;

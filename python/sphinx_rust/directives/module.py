@@ -7,7 +7,12 @@ from sphinx import addnodes
 from sphinx.util.logging import getLogger
 from sphinx.util.nodes import make_id
 
-from sphinx_rust.sphinx_rust import load_enums, load_module, load_modules, load_structs
+from sphinx_rust.sphinx_rust import (
+    load_child_enums,
+    load_child_modules,
+    load_child_structs,
+    load_module,
+)
 
 from ._core import (
     RustAutoDirective,
@@ -77,9 +82,9 @@ class RustModuleAutoDirective(RustAutoDirective):
         items: list[Module | Struct | Enum]
         objtype: ObjType
         for name, objtype, items in [  # type: ignore[assignment]
-            ("Modules", "module", load_modules(self.cache_path, module.path, False)),
-            ("Structs", "struct", load_structs(self.cache_path, module.path)),
-            ("Enums", "enum", load_enums(self.cache_path, module.path)),
+            ("Modules", "module", load_child_modules(self.cache_path, module.path)),
+            ("Structs", "struct", load_child_structs(self.cache_path, module.path)),
+            ("Enums", "enum", load_child_enums(self.cache_path, module.path)),
         ]:
             if items:
                 section = self.create_section(name)

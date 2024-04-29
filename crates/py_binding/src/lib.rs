@@ -13,9 +13,10 @@ use pyo3::{exceptions::PyIOError, prelude::*};
 
 use analyzer::analyze;
 
-use crate::objects::{Crate, Enum, Field, Module, Struct, TypeSegment, Variant};
+use crate::data_model::{Crate, Enum, Field, Module, Struct, TypeSegment, Variant};
 
-pub mod objects;
+pub mod data_model;
+pub mod data_query;
 
 #[pymodule]
 /// sphinx_rust backend
@@ -32,13 +33,16 @@ fn sphinx_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Enum>()?;
     m.add_class::<Variant>()?;
     m.add_class::<AnalysisResult>()?;
-    m.add_function(wrap_pyfunction!(load_crate, m)?)?;
-    m.add_function(wrap_pyfunction!(load_module, m)?)?;
-    m.add_function(wrap_pyfunction!(load_struct, m)?)?;
-    m.add_function(wrap_pyfunction!(load_enum, m)?)?;
-    m.add_function(wrap_pyfunction!(load_modules, m)?)?;
-    m.add_function(wrap_pyfunction!(load_structs, m)?)?;
-    m.add_function(wrap_pyfunction!(load_enums, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_crate, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_module, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_struct, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_enum, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_child_modules, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_child_structs, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_child_enums, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_descendant_modules, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_descendant_structs, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_descendant_enums, m)?)?;
     Ok(())
 }
 
@@ -168,198 +172,4 @@ where
         ))),
         Ok(_) => Ok(()),
     }
-}
-
-#[pyfunction]
-/// load a crate from the cache, if it exists
-pub fn load_crate(cache_path: &str, name: &str) -> PyResult<Option<Crate>> {
-    let path = std::path::Path::new(cache_path)
-        .join("crates")
-        .join(format!("{}.json", name));
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contents = read_file(&path)?;
-    let crate_: analyze::Crate = deserialize_object(name, &contents)?;
-    Ok(Some(crate_.into()))
-}
-
-#[pyfunction]
-/// load a module from the cache, if it exists
-pub fn load_module(cache_path: &str, full_name: &str) -> PyResult<Option<Module>> {
-    let path = std::path::Path::new(cache_path)
-        .join("modules")
-        .join(format!("{}.json", full_name));
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contents = read_file(&path)?;
-    let mod_: analyze::Module = deserialize_object(full_name, &contents)?;
-    Ok(Some(mod_.into()))
-}
-
-#[pyfunction]
-/// load a struct from the cache, if it exists
-pub fn load_struct(cache_path: &str, full_name: &str) -> PyResult<Option<Struct>> {
-    let path = std::path::Path::new(cache_path)
-        .join("structs")
-        .join(format!("{}.json", full_name));
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contents = read_file(&path)?;
-    let struct_: analyze::Struct = deserialize_object(full_name, &contents)?;
-    Ok(Some(struct_.into()))
-}
-
-#[pyfunction]
-/// load an enum from the cache, if it exists
-pub fn load_enum(cache_path: &str, full_name: &str) -> PyResult<Option<Enum>> {
-    let path = std::path::Path::new(cache_path)
-        .join("enums")
-        .join(format!("{}.json", full_name));
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contents = read_file(&path)?;
-    let enum_: analyze::Enum = deserialize_object(full_name, &contents)?;
-    Ok(Some(enum_.into()))
-}
-
-#[pyfunction]
-/// load all modules from the cache that have a common ancestor
-pub fn load_modules(
-    cache_path: &str,
-    ancestor: Vec<String>,
-    include_self: bool,
-) -> PyResult<Vec<Module>> {
-    let path = std::path::Path::new(cache_path).join("modules");
-    if !path.exists() {
-        return Ok(vec![]);
-    }
-    let ancestor_name = ancestor.join("::");
-    let mut prefix = ancestor.join("::");
-    if !prefix.is_empty() {
-        prefix.push_str("::");
-    }
-    let mut modules = vec![];
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let name = match path.file_stem() {
-                Some(name) => name,
-                None => continue,
-            };
-            let name = match name.to_str() {
-                Some(name) => name,
-                None => continue,
-            };
-            if !(name.starts_with(&prefix) || (include_self && name == &ancestor_name)) {
-                continue;
-            }
-            let contents = read_file(&path)?;
-            let mod_: analyze::Module = deserialize_object(name, &contents)?;
-            modules.push(mod_.into());
-        }
-    }
-    Ok(modules)
-}
-
-#[pyfunction]
-/// load all structs from the cache that have a common ancestor
-pub fn load_structs(cache_path: &str, ancestor: Vec<String>) -> PyResult<Vec<Struct>> {
-    let path = std::path::Path::new(cache_path).join("structs");
-    if !path.exists() {
-        return Ok(vec![]);
-    }
-    let mut prefix = ancestor.join("::");
-    if !prefix.is_empty() {
-        prefix.push_str("::");
-    }
-    let mut structs = vec![];
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let name = match path.file_stem() {
-                Some(name) => name,
-                None => continue,
-            };
-            let name = match name.to_str() {
-                Some(name) => name,
-                None => continue,
-            };
-            if !name.starts_with(&prefix) {
-                continue;
-            }
-            let contents = read_file(&path)?;
-            let struct_: analyze::Struct = deserialize_object(name, &contents)?;
-            structs.push(struct_.into());
-        }
-    }
-    Ok(structs)
-}
-
-#[pyfunction]
-/// load all enums from the cache that that have a common ancestor
-pub fn load_enums(cache_path: &str, ancestor: Vec<String>) -> PyResult<Vec<Enum>> {
-    let path = std::path::Path::new(cache_path).join("enums");
-    if !path.exists() {
-        return Ok(vec![]);
-    }
-    let mut prefix = ancestor.join("::");
-    if !prefix.is_empty() {
-        prefix.push_str("::");
-    }
-    let mut enums = vec![];
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let name = match path.file_stem() {
-                Some(name) => name,
-                None => continue,
-            };
-            let name = match name.to_str() {
-                Some(name) => name,
-                None => continue,
-            };
-            if !name.starts_with(&prefix) {
-                continue;
-            }
-            let contents = read_file(&path)?;
-            let enum_: analyze::Enum = deserialize_object(name, &contents)?;
-            enums.push(enum_.into());
-        }
-    }
-    Ok(enums)
-}
-
-fn read_file(path: &std::path::Path) -> PyResult<String> {
-    match std::fs::read_to_string(path) {
-        Ok(contents) => Ok(contents),
-        Err(err) => Err(PyIOError::new_err(format!(
-            "Could not read file: {}: {}",
-            path.to_string_lossy(),
-            err
-        ))),
-    }
-}
-
-/// Deserialize an object from a string.
-fn deserialize_object<'a, T>(name: &str, content: &'a str) -> PyResult<T>
-where
-    T: serde::Deserialize<'a>,
-{
-    let obj: T = match serde_json::from_str(content) {
-        Ok(crate_) => crate_,
-        Err(err) => {
-            return Err(PyIOError::new_err(format!(
-                "Could not deserialize {}: {}",
-                name, err
-            )))
-        }
-    };
-    Ok(obj)
 }

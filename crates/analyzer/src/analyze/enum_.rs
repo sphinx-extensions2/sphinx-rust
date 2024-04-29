@@ -1,24 +1,10 @@
 //! Analyze enums
 use quote::quote;
-use serde::{Deserialize, Serialize};
 use syn::ItemEnum;
 
-use super::{docstring_from_attrs, struct_::Field};
+use crate::data_model::{Enum, Field, Variant};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a Enum
-///
-/// .. req:: Represent an enum
-///     :id: RUST003
-///     :tags: rust
-///     :status: in-progress
-pub struct Enum {
-    /// The fully qualified name of the enum
-    pub path: Vec<String>,
-    /// The docstring of the enum
-    pub docstring: String,
-    pub variants: Vec<Variant>,
-}
+use super::docstring_from_attrs;
 
 impl Enum {
     /// Fully qualified name of the variant
@@ -41,17 +27,6 @@ impl Enum {
             variants,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Representation of a Enum variant
-pub struct Variant {
-    /// The fully qualified name of the variant
-    pub path: Vec<String>,
-    /// The docstring of the variant
-    pub docstring: String,
-    pub discriminant: Option<String>, // TODO shouldn't just be a string
-    pub fields: Vec<Field>,
 }
 
 impl Variant {
