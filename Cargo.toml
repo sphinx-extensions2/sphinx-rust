@@ -12,6 +12,7 @@ license = "MIT"
 
 [workspace.dependencies]
 anyhow = "1.0.82"
+dunce = "1.0.4"
 toml = "0.8.12"
 insta = { version = "1.38.0", features = ["yaml"] }
 pyo3 = "0.21.2"
