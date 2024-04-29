@@ -34,6 +34,10 @@ class RustAutoDirective(SphinxDirective):
         return self.state.document  # type: ignore[no-any-return]
 
     @property
+    def rust_config(self) -> RustConfig:
+        return RustConfig.from_app(self.env.app)
+
+    @property
     def rust_domain(self) -> RustDomain:
         # avoid circular import
         from sphinx_rust.domain import RustDomain  # noqa: PLC0415
@@ -157,10 +161,10 @@ def parse_docstring(
     return document.children
 
 
-def create_xref(
-    docname: str, path: str, objtype: ObjType, *, warn_dangling: bool = False
+def create_object_xref(
+    docname: str, full_name: str, objtype: ObjType, *, warn_dangling: bool = False
 ) -> addnodes.pending_xref:
-    """Create a cross-reference node.
+    """Create a cross-reference node to a rust object.
 
     :param docname: The document name.
     :param path: The fully qualified path to the object, e.g. ``crate::module::Item``.
@@ -171,11 +175,38 @@ def create_xref(
         "reftype": objtype,
         "refexplicit": True,
         "refwarn": warn_dangling,
-        "reftarget": path,
+        "reftarget": full_name,
     }
-    ref = addnodes.pending_xref(path, **options)
-    name = path.split("::")[-1]
+    ref = addnodes.pending_xref(full_name, **options)
+    name = full_name.split("::")[-1]
     ref += nodes.literal(name, name)
+
+    return ref
+
+
+def create_source_xref(
+    docname: str,
+    full_name: str,
+    *,
+    warn_dangling: bool = False,
+    text: str | None = None,
+) -> addnodes.pending_xref:
+    """Create a cross-reference node to the source-code of a rust object.
+
+    :param docname: The document name.
+    :param path: The fully qualified path to the object, e.g. ``crate::module::Item``.
+    """
+    options = {
+        "refdoc": docname,
+        "refdomain": "std",
+        "reftype": "ref",
+        "refexplicit": True,
+        "refwarn": warn_dangling,
+        "reftarget": f"rust-code:{full_name}",
+    }
+    ref = addnodes.pending_xref(full_name, **options)
+    text = full_name.split("::")[-1] if text is None else text
+    ref += nodes.literal(text, text)
 
     return ref
 

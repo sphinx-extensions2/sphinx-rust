@@ -22,6 +22,7 @@ rust_doc_formats = {
     "analyzer": "restructuredtext",
     "sphinx_rust": "markdown",
 }
+rust_viewcode = True
 
 intersphinx_mapping = {
     "sphinx": ("https://www.sphinx-doc.org", None),

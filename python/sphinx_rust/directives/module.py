@@ -11,8 +11,9 @@ from sphinx_rust.sphinx_rust import load_enums, load_module, load_modules, load_
 
 from ._core import (
     RustAutoDirective,
+    create_object_xref,
+    create_source_xref,
     create_summary_table,
-    create_xref,
     parse_docstring,
 )
 
@@ -62,15 +63,24 @@ class RustModuleAutoDirective(RustAutoDirective):
         self.doc.note_explicit_target(signature)
         self.rust_domain.note_object(module.path_str, "module", node_id, signature)
 
+        if self.rust_config.rust_viewcode and module and module.file:
+            root += nodes.paragraph(
+                "",
+                "",
+                create_source_xref(
+                    self.env.docname, module.path_str, text="[View Source]"
+                ),
+            )
+
         if module.docstring:
             root += parse_docstring(self.env, self.doc, module)
 
         items: list[Module | Struct | Enum]
         objtype: ObjType
         for name, objtype, items in [  # type: ignore[assignment]
-            ("Modules", "module", load_modules(self.cache_path, qualifier + "::")),
-            ("Structs", "struct", load_structs(self.cache_path, qualifier + "::")),
-            ("Enums", "enum", load_enums(self.cache_path, qualifier + "::")),
+            ("Modules", "module", load_modules(self.cache_path, module.path, False)),
+            ("Structs", "struct", load_structs(self.cache_path, module.path)),
+            ("Enums", "enum", load_enums(self.cache_path, module.path)),
         ]:
             if items:
                 section = self.create_section(name)
@@ -81,7 +91,9 @@ class RustModuleAutoDirective(RustAutoDirective):
                             nodes.paragraph(
                                 "",
                                 "",
-                                create_xref(self.env.docname, item.path_str, objtype),
+                                create_object_xref(
+                                    self.env.docname, item.path_str, objtype
+                                ),
                             )
                         ],
                         parse_docstring(

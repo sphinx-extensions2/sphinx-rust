@@ -7,13 +7,19 @@ from sphinx import addnodes
 from sphinx.util.logging import getLogger
 from sphinx.util.nodes import make_id
 
-from sphinx_rust.sphinx_rust import load_crate, load_enums, load_modules, load_structs
+from sphinx_rust.sphinx_rust import (
+    load_crate,
+    load_enums,
+    load_module,
+    load_modules,
+    load_structs,
+)
 
 from ._core import (
     RustAutoDirective,
-    create_field_list,
+    create_object_xref,
+    create_source_xref,
     create_summary_table,
-    create_xref,
     parse_docstring,
 )
 
@@ -50,31 +56,42 @@ class RustCrateAutoDirective(RustAutoDirective):
             )
             return []
 
+        crate_mod = load_module(self.cache_path, crate.name)
+
         # TODO self.env.note_dependency
 
         root = nodes.Element()
-        root += create_field_list(
-            [([nodes.Text("Version")], [nodes.Text(crate.version)])]
-        )
+
+        # root += create_field_list(([nodes.Text("Version")], [nodes.Text(crate.version)]))
+        root += nodes.paragraph("", f"Version: {crate.version}")
 
         desc = addnodes.desc()
         root += desc
-        signature = addnodes.desc_signature(crate.path_str, f"pub mod {crate.name};")
+        signature = addnodes.desc_signature(crate.name, f"pub mod {crate.name};")
         desc += signature
-        node_id = make_id(self.env, self.doc, "", crate.path_str)
+        node_id = make_id(self.env, self.doc, "", crate.name)
         signature["ids"].append(node_id)
         self.doc.note_explicit_target(signature)
-        self.rust_domain.note_object(crate.path_str, "crate", node_id, signature)
+        self.rust_domain.note_object(crate.name, "crate", node_id, signature)
 
-        if crate.docstring:
-            root += parse_docstring(self.env, self.doc, crate)
+        if self.rust_config.rust_viewcode and crate_mod and crate_mod.file:
+            root += nodes.paragraph(
+                "",
+                "",
+                create_source_xref(
+                    self.env.docname, crate_mod.path_str, text="[View Source]"
+                ),
+            )
+
+        if crate_mod and crate_mod.docstring:
+            root += parse_docstring(self.env, self.doc, crate_mod)
 
         items: list[Module | Struct | Enum]
         objtype: ObjType
         for name, objtype, items in [  # type: ignore[assignment]
-            ("Modules", "module", load_modules(self.cache_path, qualifier + "::")),
-            ("Structs", "struct", load_structs(self.cache_path, qualifier + "::")),
-            ("Enums", "enum", load_enums(self.cache_path, qualifier + "::")),
+            ("Modules", "module", load_modules(self.cache_path, [crate.name], False)),
+            ("Structs", "struct", load_structs(self.cache_path, [crate.name])),
+            ("Enums", "enum", load_enums(self.cache_path, [crate.name])),
         ]:
             if items:
                 section = self.create_section(name)
@@ -85,7 +102,9 @@ class RustCrateAutoDirective(RustAutoDirective):
                             nodes.paragraph(
                                 "",
                                 "",
-                                create_xref(self.env.docname, item.path_str, objtype),
+                                create_object_xref(
+                                    self.env.docname, item.path_str, objtype
+                                ),
                             )
                         ],
                         parse_docstring(

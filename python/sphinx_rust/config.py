@@ -13,6 +13,7 @@ class RustConfig:
 
     rust_crates: list[str]
     rust_doc_formats: dict[str, str]
+    rust_viewcode: bool
 
     @classmethod
     def from_app(cls, app: Sphinx) -> RustConfig:
@@ -20,6 +21,7 @@ class RustConfig:
         return cls(
             rust_crates=app.config.rust_crates,
             rust_doc_formats=app.config.rust_doc_formats,
+            rust_viewcode=app.config.rust_viewcode,
         )
 
     @staticmethod
@@ -27,3 +29,4 @@ class RustConfig:
         """Add the configuration values for the Rust domain."""
         app.add_config_value("rust_crates", [], "env")
         app.add_config_value("rust_doc_formats", {}, "env")
+        app.add_config_value("rust_viewcode", False, "env")

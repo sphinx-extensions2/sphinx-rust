@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Literal, TypedDict
@@ -21,7 +22,7 @@ from sphinx_rust.roles import (
     RustModuleXRefRole,
     RustStructXRefRole,
 )
-from sphinx_rust.sphinx_rust import analyze_crate
+from sphinx_rust.sphinx_rust import analyze_crate, load_modules
 
 if TYPE_CHECKING:
     from docutils.nodes import Element
@@ -88,13 +89,14 @@ class RustDomain(Domain):
     @staticmethod
     def on_builder_inited(app: Sphinx) -> None:
         """Analyze the Rust crates."""
+        config = RustConfig.from_app(app)
         # create the cache directory
-        app.env.rust_cache_path = cache = Path(str(app.outdir)) / "rust_cache"  # type: ignore[attr-defined]
+        app.env.rust_cache_path = cache = Path(str(app.doctreedir)) / "_rust_cache"  # type: ignore[attr-defined]
         cache.mkdir(exist_ok=True)
         srcdir = Path(
             str(app.srcdir)
         )  # for back-compatibility, assume it might not be a Path
-        for crate in RustConfig.from_app(app).rust_crates:
+        for crate in config.rust_crates:
             path = Path(str(app.srcdir)) / str(crate)
             # analyze the crate
             LOGGER.info(f"[rust] Analyzing crate: {path.resolve()!s}")
@@ -106,6 +108,8 @@ class RustDomain(Domain):
                 )
                 return
             create_pages(srcdir, result)
+            if config.rust_viewcode:
+                create_code_pages(result.crate_, srcdir, cache)
 
     @property
     def objects(self) -> dict[str, ObjectEntry]:
@@ -199,8 +203,9 @@ def create_pages(srcdir: Path, result: AnalysisResult) -> None:
 
     # create the sub-indexes
     indexes = []
-    if result.modules:
-        create_object_pages(root, "module", result.modules)
+    modules = [m for m in result.modules if m != result.crate_]
+    if modules:
+        create_object_pages(root, "module", modules)
         indexes.append("modules/index")
     if result.structs:
         create_object_pages(root, "struct", result.structs)
@@ -230,3 +235,30 @@ def create_object_pages(folder: Path, otype: str, names: list[str]) -> None:
             f"{title}\n{'=' * len(title)}\n\n.. rust:{otype}:: {name}\n"
         )
     ofolder.joinpath("index.rst").write_text(index_content)
+
+
+def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
+    if modules := [
+        (m.path_str, m.file)
+        for m in load_modules(str(cache), [crate_name], True)
+        if m.file
+    ]:
+        code_folder = srcdir.joinpath("api", "crates", crate_name, "code")
+        code_folder.mkdir(exist_ok=True, parents=True)
+        for full_name, file_path in modules:
+            rel_path = os.path.relpath(file_path, code_folder)
+            # note, this is available only in Python 3.12+
+            # rel_path = Path(file_path).relative_to(code_folder, walk_up=True)
+            # TODO only write the file if it doesn't exist or is different
+            code_folder.joinpath(f"{full_name}.rst").write_text(
+                "\n".join(
+                    (
+                        ":orphan:",
+                        "",
+                        f".. literalinclude:: {rel_path}",
+                        f"   :name: rust-code:{full_name}",
+                        "   :language: rust",
+                        "   :linenos:",
+                    )
+                )
+            )
