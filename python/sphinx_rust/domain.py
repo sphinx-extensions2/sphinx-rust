@@ -246,7 +246,7 @@ def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
         code_folder = srcdir.joinpath("api", "crates", crate_name, "code")
         code_folder.mkdir(exist_ok=True, parents=True)
         for full_name, file_path in modules:
-            rel_path = os.path.relpath(file_path, code_folder)
+            rel_path = os.path.relpath(Path(file_path), code_folder)
             # note, this is available only in Python 3.12+
             # rel_path = Path(file_path).relative_to(code_folder, walk_up=True)
             # TODO only write the file if it doesn't exist or is different
