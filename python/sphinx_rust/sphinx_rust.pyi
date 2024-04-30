@@ -42,6 +42,14 @@ def load_enum(cache_path: str, full_name: str, /) -> Enum | None:
     :raises IOError: If the load fails.
     """
 
+def load_function(cache_path: str, full_name: str, /) -> Function | None:
+    """Load a function from the cache, it it exists.
+
+    :param cache_path: The path to the cache directory.
+    param full_name: The fully qualified name of the function to load, e.g. ``a::b::c``.
+    :raises IOError: If the load fails.
+    """
+
 def load_child_modules(cache_path: str, parent: list[str], /) -> list[Module]:
     """Load all modules from the cache that are children of the given parent
 
@@ -60,6 +68,14 @@ def load_child_structs(cache_path: str, parent: list[str], /) -> list[Struct]:
 
 def load_child_enums(cache_path: str, parent: list[str], /) -> list[Enum]:
     """Load all enums from the cache that are children of the given parent
+
+    :param cache_path: The path to the cache directory.
+    :param parent: The fully qualified name of the parent.
+    :raises IOError: If the load fails.
+    """
+
+def load_child_functions(cache_path: str, parent: list[str], /) -> list[Function]:
+    """Load all functions from the cache that are children of the given parent
 
     :param cache_path: The path to the cache directory.
     :param parent: The fully qualified name of the parent.
@@ -100,6 +116,7 @@ class AnalysisResult:
     modules: list[str]
     structs: list[str]
     enums: list[str]
+    functions: list[str]
 
 class Crate:
     """Representation of a crate."""
@@ -181,3 +198,14 @@ class TypeSegment:
 
     content: str
     is_path: bool
+
+class Function:
+    """Representation of a function."""
+
+    name: str
+    """The name of the struct."""
+    path: list[str]
+    """The fully qualified path"""
+    path_str: str
+    """The fully qualified name as a string, e.g. ``a::b::c``"""
+    docstring: str

@@ -260,3 +260,37 @@ impl From<data_model::TypeSegment> for TypeSegment {
         }
     }
 }
+
+#[pyclass]
+#[derive(Clone)]
+/// pyo3 representation of a function
+pub struct Function {
+    #[pyo3(get)]
+    pub path: Vec<String>,
+    #[pyo3(get)]
+    pub docstring: String,
+}
+
+#[pymethods]
+impl Function {
+    pub fn __repr__(&self) -> String {
+        format!("Function({:?})", self.path_str())
+    }
+    #[getter]
+    pub fn path_str(&self) -> String {
+        self.path.join("::")
+    }
+    #[getter]
+    pub fn name(&self) -> String {
+        self.path.last().unwrap().clone()
+    }
+}
+
+impl From<data_model::Function> for Function {
+    fn from(field: data_model::Function) -> Self {
+        Function {
+            path: field.path,
+            docstring: field.docstring,
+        }
+    }
+}

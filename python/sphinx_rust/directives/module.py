@@ -9,6 +9,7 @@ from sphinx.util.nodes import make_id
 
 from sphinx_rust.sphinx_rust import (
     load_child_enums,
+    load_child_functions,
     load_child_modules,
     load_child_structs,
     load_module,
@@ -24,7 +25,7 @@ from ._core import (
 
 if TYPE_CHECKING:
     from sphinx_rust.domain import ObjType
-    from sphinx_rust.sphinx_rust import Enum, Module, Struct
+    from sphinx_rust.sphinx_rust import Enum, Function, Module, Struct
 
 LOGGER = getLogger(__name__)
 
@@ -41,7 +42,7 @@ class RustModuleAutoDirective(RustAutoDirective):
             module = load_module(self.cache_path, qualifier)
         except OSError as e:
             LOGGER.warning(
-                f"Error loading crate {qualifier!r}: {e!s}",
+                f"Error loading module {qualifier!r}: {e!s}",
                 type="rust",
                 subtype="cache",
             )
@@ -79,12 +80,17 @@ class RustModuleAutoDirective(RustAutoDirective):
         if module.docstring:
             root += parse_docstring(self.env, self.doc, module)
 
-        items: list[Module | Struct | Enum]
+        items: list[Module | Struct | Enum | Function]
         objtype: ObjType
         for name, objtype, items in [  # type: ignore[assignment]
             ("Modules", "module", load_child_modules(self.cache_path, module.path)),
             ("Structs", "struct", load_child_structs(self.cache_path, module.path)),
             ("Enums", "enum", load_child_enums(self.cache_path, module.path)),
+            (
+                "Functions",
+                "function",
+                load_child_functions(self.cache_path, module.path),
+            ),
         ]:
             if items:
                 section = self.create_section(name)
