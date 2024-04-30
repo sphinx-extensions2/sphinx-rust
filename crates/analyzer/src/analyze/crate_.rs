@@ -2,7 +2,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::data_model::{Crate, Enum, Module, Struct};
+use crate::data_model::{Crate, Enum, Function, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // make the path absolute
@@ -56,15 +56,10 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         )));
     };
 
-    let mut result = AnalysisResult {
-        crate_: Crate {
-            name: crate_name,
-            version: cargo_toml.package.version.clone(),
-        },
-        modules: vec![],
-        structs: vec![],
-        enums: vec![],
-    };
+    let mut result = AnalysisResult::new(Crate {
+        name: crate_name,
+        version: cargo_toml.package.version.clone(),
+    });
 
     // check existence of the root module
     let root_module = path.join(to_root);
@@ -74,7 +69,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
     // read the top-level module
     let content = std::fs::read_to_string(&root_module)?;
-    let (module, structs, enums) =
+    let (module, structs, enums, functions) =
         Module::parse(Some(&root_module), &[&result.crate_.name], &content).context(format!(
             "Error parsing module {}",
             root_module.to_string_lossy()
@@ -94,6 +89,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     result.modules.push(module);
     result.structs.extend(structs);
     result.enums.extend(enums);
+    result.functions.extend(functions);
 
     // recursively find/read the public sub-modules
     let mut read_modules = vec![];
@@ -121,7 +117,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
 
         let content = std::fs::read_to_string(&module_path)?;
         let path: Vec<String> = [&parent[..], &[module_name]].concat();
-        let (module, structs, enums) = Module::parse(
+        let (module, structs, enums, functions) = Module::parse(
             Some(&module_path),
             &path.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
             &content,
@@ -140,6 +136,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
         result.modules.push(module);
         result.structs.extend(structs);
         result.enums.extend(enums);
+        result.functions.extend(functions);
     }
 
     Ok(result)
@@ -152,6 +149,19 @@ pub struct AnalysisResult {
     pub modules: Vec<Module>,
     pub structs: Vec<Struct>,
     pub enums: Vec<Enum>,
+    pub functions: Vec<Function>,
+}
+
+impl AnalysisResult {
+    pub fn new(crate_: Crate) -> Self {
+        Self {
+            crate_,
+            modules: vec![],
+            structs: vec![],
+            enums: vec![],
+            functions: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -308,6 +318,7 @@ mod tests {
               - DummyEnum2
             docstring: The enum2 docstring
             variants: []
+        functions: []
         "###);
 
         Ok(())

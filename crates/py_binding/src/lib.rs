@@ -13,8 +13,6 @@ use pyo3::{exceptions::PyIOError, prelude::*};
 
 use analyzer::analyze;
 
-use crate::data_model::{Crate, Enum, Field, Module, Struct, TypeSegment, Variant};
-
 pub mod data_model;
 pub mod data_query;
 
@@ -25,21 +23,24 @@ pub mod data_query;
 fn sphinx_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(analyze_crate, m)?)?;
-    m.add_class::<Crate>()?;
-    m.add_class::<Module>()?;
-    m.add_class::<Struct>()?;
-    m.add_class::<Field>()?;
-    m.add_class::<TypeSegment>()?;
-    m.add_class::<Enum>()?;
-    m.add_class::<Variant>()?;
+    m.add_class::<data_model::Crate>()?;
+    m.add_class::<data_model::Module>()?;
+    m.add_class::<data_model::Struct>()?;
+    m.add_class::<data_model::Field>()?;
+    m.add_class::<data_model::TypeSegment>()?;
+    m.add_class::<data_model::Enum>()?;
+    m.add_class::<data_model::Variant>()?;
+    m.add_class::<data_model::Function>()?;
     m.add_class::<AnalysisResult>()?;
     m.add_function(wrap_pyfunction!(data_query::load_crate, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_module, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_struct, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_enum, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_function, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_child_modules, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_child_structs, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_child_enums, m)?)?;
+    m.add_function(wrap_pyfunction!(data_query::load_child_functions, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_descendant_modules, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_descendant_structs, m)?)?;
     m.add_function(wrap_pyfunction!(data_query::load_descendant_enums, m)?)?;
@@ -113,6 +114,15 @@ pub fn analyze_crate(crate_path: &str, cache_path: &str) -> PyResult<AnalysisRes
         let enum_path = enums_path.join(format!("{}.json", enum_.path_str()));
         serialize_to_file(&enum_path, &enum_)?;
     }
+    let funcs_path = cache_path.join("functions");
+    if !funcs_path.exists() {
+        std::fs::create_dir(&funcs_path)?;
+    }
+    for func in &result.functions {
+        output.functions.push(func.path_str().clone());
+        let func_path = funcs_path.join(format!("{}.json", func.path_str()));
+        serialize_to_file(&func_path, &func)?;
+    }
     Ok(output)
 }
 
@@ -128,6 +138,8 @@ pub struct AnalysisResult {
     pub structs: Vec<String>,
     #[pyo3(get)]
     pub enums: Vec<String>,
+    #[pyo3(get)]
+    pub functions: Vec<String>,
 }
 
 #[pymethods]

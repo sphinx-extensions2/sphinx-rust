@@ -2,9 +2,9 @@
 
 use pyo3::{exceptions::PyIOError, prelude::*};
 
-use analyzer::data_model as analyze_model;
+use analyzer::data_model::{self as analyze_model};
 
-use crate::data_model::{Crate, Enum, Module, Struct};
+use crate::data_model::{Crate, Enum, Function, Module, Struct};
 
 fn read_file(path: &std::path::Path) -> PyResult<String> {
     match std::fs::read_to_string(path) {
@@ -88,6 +88,20 @@ pub fn load_enum(cache_path: &str, full_name: &str) -> PyResult<Option<Enum>> {
     let contents = read_file(&path)?;
     let enum_: analyze_model::Enum = deserialize_object(full_name, &contents)?;
     Ok(Some(enum_.into()))
+}
+
+#[pyfunction]
+/// load a function from the cache, if it exists
+pub fn load_function(cache_path: &str, full_name: &str) -> PyResult<Option<Function>> {
+    let path = std::path::Path::new(cache_path)
+        .join("functions")
+        .join(format!("{}.json", full_name));
+    if !path.exists() {
+        return Ok(None);
+    }
+    let contents = read_file(&path)?;
+    let func: analyze_model::Function = deserialize_object(full_name, &contents)?;
+    Ok(Some(func.into()))
 }
 
 /// Check if a path is a child of a given parent, and return the fully qualified name of the child.
@@ -176,6 +190,28 @@ pub fn load_child_enums(cache_path: &str, parent: Vec<String>) -> PyResult<Vec<E
         }
     }
     Ok(enums)
+}
+
+#[pyfunction]
+/// load all function from the cache that are children of the given parent
+pub fn load_child_functions(cache_path: &str, parent: Vec<String>) -> PyResult<Vec<Function>> {
+    let path = std::path::Path::new(cache_path).join("functions");
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let mut funcs = vec![];
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(name) = is_child(&path, &parent) {
+                let contents = read_file(&path)?;
+                let func: analyze_model::Function = deserialize_object(&name, &contents)?;
+                funcs.push(func.into());
+            }
+        }
+    }
+    Ok(funcs)
 }
 
 /// Check if a path is an ancestor of a given parent, and return the fully qualified name of the child.

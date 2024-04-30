@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 use syn::parse_file;
 
-use crate::data_model::{Enum, Module, Struct};
+use crate::data_model::{Enum, Function, Module, Struct};
 
 use super::docstring_from_attrs;
 
@@ -18,7 +18,7 @@ impl Module {
         file: Option<&Path>,
         path: &[&str],
         content: &str,
-    ) -> Result<(Self, Vec<Struct>, Vec<Enum>)> {
+    ) -> Result<(Self, Vec<Struct>, Vec<Enum>, Vec<Function>)> {
         let syntax = parse_file(content)?;
         let mut mod_ = Self {
             file: file.map(|f| f.to_string_lossy().to_string()), // TODO better way to serialize the path, also ?
@@ -29,6 +29,7 @@ impl Module {
 
         let mut structs = vec![];
         let mut enums = vec![];
+        let mut functions = vec![];
 
         for item in syntax.items {
             // TODO traits, functions, impls, et
@@ -51,11 +52,17 @@ impl Module {
                         enums.push(enum_);
                     }
                 }
+                syn::Item::Fn(fn_item) => {
+                    if let syn::Visibility::Public(_) = fn_item.vis {
+                        let function = Function::parse(path, fn_item);
+                        functions.push(function);
+                    }
+                }
                 _ => {}
             }
         }
 
-        Ok((mod_, structs, enums))
+        Ok((mod_, structs, enums, functions))
     }
 
     pub fn to_json(&self) -> String {
@@ -99,6 +106,7 @@ pub enum MyEnum {
                 docstring: ""
                 discriminant: ~
                 fields: []
+        - []
         "###);
     }
 }

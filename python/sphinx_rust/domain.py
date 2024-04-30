@@ -8,20 +8,16 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 
 from sphinx import addnodes
 from sphinx.domains import Domain
+from sphinx.roles import XRefRole
 from sphinx.util.logging import getLogger
 from sphinx.util.nodes import make_refnode
 
 from sphinx_rust.config import RustConfig
 from sphinx_rust.directives.crate import RustCrateAutoDirective
 from sphinx_rust.directives.enum import RustEnumAutoDirective
+from sphinx_rust.directives.function import RustFunctionAutoDirective
 from sphinx_rust.directives.module import RustModuleAutoDirective
 from sphinx_rust.directives.struct import RustStructAutoDirective
-from sphinx_rust.roles import (
-    RustCrateXRefRole,
-    RustEnumXRefRole,
-    RustModuleXRefRole,
-    RustStructXRefRole,
-)
 from sphinx_rust.sphinx_rust import analyze_crate, load_descendant_modules
 
 if TYPE_CHECKING:
@@ -37,7 +33,7 @@ if TYPE_CHECKING:
 LOGGER = getLogger(__name__)
 
 
-ObjType = Literal["crate", "module", "struct", "enum"]
+ObjType = Literal["crate", "module", "struct", "enum", "function"]
 
 
 @dataclass
@@ -67,13 +63,15 @@ class RustDomain(Domain):
         "module": RustModuleAutoDirective,
         "struct": RustStructAutoDirective,
         "enum": RustEnumAutoDirective,
+        "function": RustFunctionAutoDirective,
     }
 
     roles = {
-        "crate": RustCrateXRefRole(),
-        "module": RustModuleXRefRole(),
-        "struct": RustStructXRefRole(),
-        "enum": RustEnumXRefRole(),
+        "crate": XRefRole(),
+        "module": XRefRole(),
+        "struct": XRefRole(),
+        "enum": XRefRole(),
+        "function": XRefRole(),
     }
 
     initial_data: DomainData = {  # type: ignore[assignment]
@@ -213,6 +211,9 @@ def create_pages(srcdir: Path, result: AnalysisResult) -> None:
     if result.enums:
         create_object_pages(root, "enum", result.enums)
         indexes.append("enums/index")
+    if result.functions:
+        create_object_pages(root, "function", result.functions)
+        indexes.append("functions/index")
 
     # create the main index
     title = f"Crate ``{result.crate_}``"

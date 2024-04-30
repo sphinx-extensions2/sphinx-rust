@@ -29,7 +29,7 @@ class RustStructAutoDirective(RustAutoDirective):
             struct = load_struct(self.cache_path, qualifier)
         except OSError as e:
             LOGGER.warning(
-                f"Error loading crate {qualifier!r}: {e!s}",
+                f"Error loading struct {qualifier!r}: {e!s}",
                 type="rust",
                 subtype="cache",
             )

@@ -2,6 +2,7 @@
 
 pub mod crate_;
 pub mod enum_;
+pub mod function;
 pub mod module;
 pub mod struct_;
 pub mod type_;

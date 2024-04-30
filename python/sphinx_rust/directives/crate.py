@@ -9,6 +9,7 @@ from sphinx.util.nodes import make_id
 
 from sphinx_rust.sphinx_rust import (
     load_child_enums,
+    load_child_functions,
     load_child_modules,
     load_child_structs,
     load_crate,
@@ -25,7 +26,7 @@ from ._core import (
 
 if TYPE_CHECKING:
     from sphinx_rust.domain import ObjType
-    from sphinx_rust.sphinx_rust import Enum, Module, Struct
+    from sphinx_rust.sphinx_rust import Enum, Function, Module, Struct
 
 LOGGER = getLogger(__name__)
 
@@ -85,12 +86,17 @@ class RustCrateAutoDirective(RustAutoDirective):
         if crate_mod and crate_mod.docstring:
             root += parse_docstring(self.env, self.doc, crate_mod)
 
-        items: list[Module | Struct | Enum]
+        items: list[Module | Struct | Enum | Function]
         objtype: ObjType
         for name, objtype, items in [  # type: ignore[assignment]
             ("Modules", "module", load_child_modules(self.cache_path, [crate.name])),
             ("Structs", "struct", load_child_structs(self.cache_path, [crate.name])),
             ("Enums", "enum", load_child_enums(self.cache_path, [crate.name])),
+            (
+                "Functions",
+                "function",
+                load_child_functions(self.cache_path, [crate.name]),
+            ),
         ]:
             if items:
                 section = self.create_section(name)

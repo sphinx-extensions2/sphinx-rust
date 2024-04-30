@@ -84,6 +84,16 @@ pub struct Field {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Representation of a function
+pub struct Function {
+    /// The fully qualified name of the function.
+    pub path: Vec<String>,
+    /// The docstring of the function
+    pub docstring: String,
+    // TODO signature
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// A segment of a type signature
 ///
 /// Types are split into segments to allow for easy identification of referenceable elements
