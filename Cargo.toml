@@ -25,3 +25,8 @@ tempfile = "3.10.1"
 [workspace.lints.clippy]
 print_stdout = "warn"
 print_stderr = "warn"
+
+[workspace.metadata.release]
+allow-branch = ["main"]
+no_individual_tags = true
+message = "🚀 Release %v"
