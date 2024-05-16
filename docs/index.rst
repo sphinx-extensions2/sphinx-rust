@@ -7,7 +7,7 @@ Auto-document `Rust <https://www.rust-lang.org/>`__ code with :external:doc:`Sph
 
     This project is in early development and is not yet ready for production use.
 
-    It currently documents a subset of Rust code, and is not yet feature-complete, but this documents should give you a sense of what the final product will look like.
+    It currently documents a subset of Rust code, and is not yet feature-complete, but this document should give you a sense of what the final product will look like.
 
 This package is intended to bring API documentation for Rust crates to Sphinx:
 
