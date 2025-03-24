@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 import shutil
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from sphinx import addnodes
 from sphinx.domains import Domain
@@ -82,6 +82,7 @@ class RustDomain(Domain):
     def app_setup(cls, app: Sphinx) -> None:
         RustConfig.add_configs(app)
         app.connect("builder-inited", cls.on_builder_inited)
+        app.connect("build-finished", cls.on_build_finished)
         app.add_domain(cls)
 
     @staticmethod
@@ -105,9 +106,37 @@ class RustDomain(Domain):
                     f"Error analyzing crate: {e!s}", type="rust", subtype="analyze"
                 )
                 return
-            create_pages(srcdir, result)
+
+            if config.rust_enable_auto_pages:
+                create_pages(srcdir / config.rust_root_pages, result)
+
             if config.rust_viewcode:
-                create_code_pages(result.crate_, srcdir, cache)
+                create_code_pages(result.crate_, srcdir / config.rust_root_pages, cache)
+
+    @staticmethod
+    def on_build_finished(app: Sphinx, exception: Union[Exception, None]) -> None:
+        # if an exception occure, don't delete files
+        if exception is not None:
+            return
+
+        config = RustConfig.from_app(app)
+
+        if config.rust_keep_files:
+            return
+
+        srcdir = Path(str(app.srcdir))
+        for crate in config.rust_crates:
+            cache_path = app.env.rust_cache_path
+            path = srcdir / str(crate)
+            # FIXME do not parse again
+            try:
+                result = analyze_crate(str(path), str(cache_path))
+            except OSError:
+                continue
+
+            shutil.rmtree(
+                srcdir / config.rust_root_pages / result.crate_, ignore_errors=True
+            )
 
     @property
     def objects(self) -> dict[str, ObjectEntry]:
@@ -192,7 +221,7 @@ class RustDomain(Domain):
 
 def create_pages(srcdir: Path, result: AnalysisResult) -> None:
     """Create the pages for the analyzed crate."""
-    root = srcdir.joinpath("api", "crates", result.crate_)
+    root = srcdir.joinpath(result.crate_)
     if root.exists():
         # TODO only update changed files (so that sphinx knows what to rebuild)
         shutil.rmtree(root)
@@ -244,7 +273,7 @@ def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
         for m in load_descendant_modules(str(cache), [crate_name], True)
         if m.file
     ]:
-        code_folder = srcdir.joinpath("api", "crates", crate_name, "code")
+        code_folder = srcdir.joinpath(crate_name, "code")
         code_folder.mkdir(exist_ok=True, parents=True)
         for full_name, file_path in modules:
             # TODO catch exceptions here, if a relative path cannot be created
