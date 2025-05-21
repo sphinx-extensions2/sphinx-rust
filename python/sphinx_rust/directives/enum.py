@@ -49,6 +49,7 @@ class RustEnumAutoDirective(RustAutoDirective):
         desc = addnodes.desc()
         root += desc
         if enum.variants:
+            desc["objtype"] = f"{self.rust_domain.name}:struct"
             sig_lines = [addnodes.desc_signature_line("", f"pub struct {enum.name} {{")]
             for var in enum.variants:
                 # TODO types
@@ -61,6 +62,7 @@ class RustEnumAutoDirective(RustAutoDirective):
             signature = addnodes.desc_signature(enum.path_str, "", *sig_lines)
             signature["is_multiline"] = True
         else:
+            desc["objtype"] = f"{self.rust_domain.name}:enum"
             signature = addnodes.desc_signature(
                 enum.path_str, f"pub enum {enum.name} {{}}"
             )

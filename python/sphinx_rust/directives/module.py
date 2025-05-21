@@ -61,6 +61,9 @@ class RustModuleAutoDirective(RustAutoDirective):
         root = nodes.Element()
 
         desc = addnodes.desc()
+
+        desc["objtype"] = f"{self.rust_domain.name}:module"
+
         root += desc
         signature = addnodes.desc_signature(module.path_str, f"pub mod {module.name};")
         desc += signature

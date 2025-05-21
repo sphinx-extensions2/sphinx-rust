@@ -46,6 +46,7 @@ class RustFunctionAutoDirective(RustAutoDirective):
         root = nodes.Element()
 
         desc = addnodes.desc()
+        desc["objtype"] = f"{self.rust_domain.name}:function"
         root += desc
         signature = addnodes.desc_signature(
             func.path_str,

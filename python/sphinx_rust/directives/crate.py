@@ -67,6 +67,7 @@ class RustCrateAutoDirective(RustAutoDirective):
         root += nodes.paragraph("", f"Version: {crate.version}")
 
         desc = addnodes.desc()
+        desc["objtype"] = f"{self.rust_domain.name}:crate"
         root += desc
         signature = addnodes.desc_signature(crate.name, f"pub mod {crate.name};")
         desc += signature

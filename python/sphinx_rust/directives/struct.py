@@ -48,6 +48,7 @@ class RustStructAutoDirective(RustAutoDirective):
         root = nodes.Element()
 
         desc = addnodes.desc()
+        desc["objtype"] = f"{self.rust_domain.name}:struct"
         root += desc
         if struct.fields:
             sig_lines = [
