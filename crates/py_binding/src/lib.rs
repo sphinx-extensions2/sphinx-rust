@@ -162,25 +162,20 @@ where
         Ok(value) => value,
         Err(err) => {
             return Err(PyIOError::new_err(format!(
-                "Could not serialize value: {}",
-                err
+                "Could not serialize value: {err}"
             )))
         }
     };
     if path.exists() {
-        match std::fs::read_to_string(path) {
-            Ok(old_value) => {
-                if value == old_value {
-                    return Ok(());
-                }
+        if let Ok(old_value) = std::fs::read_to_string(path) {
+            if value == old_value {
+                return Ok(());
             }
-            Err(_) => {}
         };
     }
     match std::fs::write(path, value) {
         Err(err) => Err(PyIOError::new_err(format!(
-            "Could not write value to file: {}",
-            err
+            "Could not write value to file: {err}"
         ))),
         Ok(_) => Ok(()),
     }

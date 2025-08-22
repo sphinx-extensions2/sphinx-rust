@@ -31,7 +31,7 @@ class RustAutoDirective(SphinxDirective):
 
     @property
     def doc(self) -> nodes.document:
-        return self.state.document  # type: ignore[no-any-return]
+        return self.state.document
 
     @property
     def rust_config(self) -> RustConfig:
@@ -146,8 +146,11 @@ def parse_docstring(
         return []
 
     docstring = item.docstring if docstring is None else docstring
-    source_path = env.doc2path(  # TODO this actually should be the rust file path
-        env.docname
+
+    source_path = str(
+        env.doc2path(  # TODO this actually should be the rust file path
+            env.docname
+        )
     )
     # TODO how to handle line numbers?
     document = utils.new_document(source_path, doc.settings)

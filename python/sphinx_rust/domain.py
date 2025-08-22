@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import re
 import shutil
 from typing import TYPE_CHECKING, Literal, TypedDict
 
@@ -19,6 +20,19 @@ from sphinx_rust.directives.function import RustFunctionAutoDirective
 from sphinx_rust.directives.module import RustModuleAutoDirective
 from sphinx_rust.directives.struct import RustStructAutoDirective
 from sphinx_rust.sphinx_rust import analyze_crate, load_descendant_modules
+
+INVALID_CHARS = r"[^A-Za-z0-9._-]"
+
+
+def slugify_rust_name(fullname: str) -> Path:
+    """
+    Turn `crate::mod::Type<T>` into a safe relative Path:
+    crate/mod/Type_T
+    """
+    parts = fullname.split("::")
+    cleaned = [re.sub(INVALID_CHARS, "_", p) for p in parts]
+    return Path(*cleaned)
+
 
 if TYPE_CHECKING:
     from docutils.nodes import Element
@@ -225,17 +239,31 @@ def create_pages(srcdir: Path, result: AnalysisResult) -> None:
 
 
 def create_object_pages(folder: Path, otype: str, names: list[str]) -> None:
-    """Create the pages for the objects of a certain type."""
-    ofolder = folder.joinpath(otype + "s")
+    ofolder = folder / f"{otype}s"
     ofolder.mkdir(exist_ok=True)
-    index_content = f"{otype.capitalize()}s\n{'=' * (len(otype) + 1)}\n\n.. toctree::\n    :maxdepth: 1\n\n"
-    for name in names:
-        index_content += f"    {name}\n"
-        title = f"{otype.capitalize()} ``{name}``"
-        ofolder.joinpath(f"{name}.rst").write_text(
-            f"{title}\n{'=' * len(title)}\n\n.. rust:{otype}:: {name}\n"
+
+    idx_lines = [
+        f"{otype.capitalize()}s",
+        "=" * (len(otype) + 1),
+        "",
+        ".. toctree::",
+        "    :maxdepth: 1",
+        "",
+    ]
+
+    for rust_name in names:
+        rel_path = slugify_rust_name(rust_name)
+        idx_lines.append(f"    {rel_path.as_posix()}")
+
+        dst_file = ofolder / rel_path.with_suffix(".rst")
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+
+        title = f"{otype.capitalize()} ``{rust_name}``"
+        dst_file.write_text(
+            f"{title}\n{'=' * len(title)}\n\n.. rust:{otype}:: {rust_name}\n"
         )
-    ofolder.joinpath("index.rst").write_text(index_content)
+
+    (ofolder / "index.rst").write_text("\n".join(idx_lines) + "\n")
 
 
 def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
@@ -247,17 +275,16 @@ def create_code_pages(crate_name: str, srcdir: Path, cache: Path) -> None:
         code_folder = srcdir.joinpath("api", "crates", crate_name, "code")
         code_folder.mkdir(exist_ok=True, parents=True)
         for full_name, file_path in modules:
-            # TODO catch exceptions here, if a relative path cannot be created
-            rel_path = os.path.relpath(Path(file_path), code_folder)
-            # note, this is available only in Python 3.12+
-            # rel_path = Path(file_path).relative_to(code_folder, walk_up=True)
-            # TODO only write the file if it doesn't exist or is different
-            code_folder.joinpath(f"{full_name}.rst").write_text(
+            rel = slugify_rust_name(full_name)
+            dst = code_folder / rel.with_suffix(".rst")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+
+            dst.write_text(
                 "\n".join(
                     (
                         ":orphan:",
                         "",
-                        f".. literalinclude:: {rel_path}",
+                        f".. literalinclude:: {os.path.relpath(file_path, dst.parent)}",
                         f"   :name: rust-code:{full_name}",
                         "   :language: rust",
                         "   :linenos:",

@@ -1,6 +1,6 @@
 [package]
 name = "sphinx_rust"
-version = "0.0.2"
+version = "0.0.2-dev1"
 publish = false
 edition = "2021"
 authors.workspace = true

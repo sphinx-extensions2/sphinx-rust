@@ -27,7 +27,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.9"
+        python-version: "3.10"
     - uses: pre-commit/action@v3.0.1
 
   test-cargo:
@@ -49,16 +49,15 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version:
-        - '3.9'
         - '3.10'
         - '3.11'
         - '3.12'
-        - 'pypy3.9'
+        - 'pypy3.10'
         include:
           - os: windows-latest
-            python-version: '3.9'
+            python-version: '3.10'
           - os: macos-latest
-            python-version: '3.9'
+            python-version: '3.10'
 
     runs-on: ${{ matrix.os }}
 

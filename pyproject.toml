@@ -13,7 +13,7 @@ dynamic = ["version"]
 description = "Sphinx plugin for documentation of Rust projects."
 authors = [{ name = "Chris Sewell", email = "chrisj_sewell@hotmail.com" }]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 keywords = [
   "sphinx",
@@ -26,7 +26,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -37,7 +36,7 @@ classifiers = [
   "Topic :: Text Processing :: Markup",
 ]
 dependencies = [
-  "sphinx~=7.3"
+  "sphinx>=8,<9"
 ]
 
 [project.urls]
@@ -113,7 +112,7 @@ allowlist_externals = bash
 commands_pre = bash -c "unset CONDA_PREFIX; maturin develop"
 commands = {posargs:ipython}
 
-[testenv:test-{py39,py310,py311,py312}]
+[testenv:test-{py310,py311,py312}]
 extras = test
 passenv = TERM
 ; ensure that the compilation is up-to-date

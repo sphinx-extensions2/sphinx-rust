@@ -1,68 +1,65 @@
 //! Analyze the crate
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use cargo_metadata::{MetadataCommand, Target};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 use crate::data_model::{Crate, Enum, Function, Module, Struct};
 
 pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     // make the path absolute
     // TODO we use dunce to canonicalize the path because otherwise there is issues with python's os.path.relpath on windows, but maybe we should fix this on the Python side
-    let path =
-        dunce::canonicalize(path).context(format!("Error resolving crate path: {}", path))?;
+    let crate_dir =
+        dunce::canonicalize(path).context(format!("Error resolving crate path: {path}"))?;
+    eprintln!("running new analyzer");
     // check the path is a directory
-    if !path.is_dir() {
-        return Err(anyhow::anyhow!(format!(
+    if !crate_dir.is_dir() {
+        return Err(anyhow!(
             "Crate path is not a directory: {}",
-            path.to_string_lossy()
-        )));
+            crate_dir.to_string_lossy()
+        ));
     }
     // check if Cargo.toml exists
-    let cargo_toml_path = path.join("Cargo.toml");
+    let cargo_toml_path = crate_dir.join("Cargo.toml");
     if !cargo_toml_path.exists() {
-        return Err(anyhow::anyhow!(format!(
+        return Err(anyhow!(
             "Cargo.toml does not exist in: {}",
-            path.to_string_lossy()
-        )));
+            crate_dir.to_string_lossy()
+        ));
     }
 
-    // read the Cargo.toml and initialize the Crate struct
-    let contents = std::fs::read_to_string(&cargo_toml_path)?;
-    let cargo_toml: CargoToml = toml::from_str(&contents).context(format!(
-        "Error parsing: {}",
-        cargo_toml_path.to_string_lossy()
-    ))?;
+    // use `cargo_metadata` instead of implementing own TOML parser
+    let metadata = MetadataCommand::new()
+        .manifest_path(&cargo_toml_path)
+        .exec()
+        .context("Failed to run `cargo metadata`")?;
 
-    // check whether the crate is a library or binary
-    let (crate_name, to_root) = if let Some(lib) = cargo_toml.lib {
-        if cargo_toml.bin.is_some() {
-            return Err(anyhow::anyhow!(format!(
-                "Both lib and bin sections in: {}",
-                path.to_string_lossy()
-            )));
-        }
-        (
-            lib.name.unwrap_or(cargo_toml.package.name),
-            lib.path.unwrap_or("src/lib.rs".to_string()),
-        )
-    } else if let Some(bin) = cargo_toml.bin {
-        (
-            bin.name.unwrap_or(cargo_toml.package.name),
-            bin.path.unwrap_or("src/main.rs".to_string()),
-        )
-    } else {
-        return Err(anyhow::anyhow!(format!(
-            "No lib or bin section in: {}",
-            path.to_string_lossy()
-        )));
-    };
+    let root_pkg = metadata
+        .root_package()
+        .ok_or_else(|| anyhow!("`cargo metadata` returned no root package"))?;
+
+    // Prefer library target; fall back to the first binary target
+    let root_target: &Target = root_pkg
+        .targets
+        .iter()
+        .find(|t| t.kind.contains(&"lib".into()))
+        .or_else(|| {
+            root_pkg
+                .targets
+                .iter()
+                .find(|t| t.kind.contains(&"bin".into()))
+        })
+        .ok_or_else(|| anyhow!("No lib or bin target defined in manifest"))?;
+
+    let crate_name = root_target.name.clone();
+    let root_module = PathBuf::from(&root_target.src_path);
 
     let mut result = AnalysisResult::new(Crate {
-        name: crate_name,
-        version: cargo_toml.package.version.clone(),
+        name: crate_name.clone(),
+        version: root_pkg.version.to_string(), // workspace-aware
     });
 
     // check existence of the root module
-    let root_module = path.join(to_root);
     if !root_module.exists() {
         return Ok(result);
     }
@@ -74,6 +71,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
             "Error parsing module {}",
             root_module.to_string_lossy()
         ))?;
+
     let mut modules_to_read = module
         .declarations
         .iter()
@@ -91,7 +89,7 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
     result.enums.extend(enums);
     result.functions.extend(functions);
 
-    // recursively find/read the public sub-modules
+    // recursively find/read the public sub‑modules
     let mut read_modules = vec![];
     while let Some((parent_dir, module_name, parent)) = modules_to_read.pop() {
         let (module_path, submodule_dir) =
@@ -126,12 +124,12 @@ pub fn analyze_crate(path: &str) -> Result<AnalysisResult> {
             "Error parsing module {}",
             module_path.to_string_lossy()
         ))?;
+
         modules_to_read.extend(
             module
                 .declarations
                 .iter()
-                .map(|s| (submodule_dir.clone(), s.to_string(), path.clone()))
-                .collect::<Vec<_>>(),
+                .map(|s| (submodule_dir.clone(), s.to_string(), path.clone())),
         );
         result.modules.push(module);
         result.structs.extend(structs);
@@ -162,31 +160,6 @@ impl AnalysisResult {
             functions: vec![],
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct CargoToml {
-    package: Package,
-    bin: Option<Bin>,
-    lib: Option<Lib>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Package {
-    name: String,
-    version: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Lib {
-    name: Option<String>,
-    path: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Bin {
-    name: Option<String>,
-    path: Option<String>,
 }
 
 #[cfg(test)]

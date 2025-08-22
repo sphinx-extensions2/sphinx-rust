@@ -26,8 +26,7 @@ where
         Ok(crate_) => crate_,
         Err(err) => {
             return Err(PyIOError::new_err(format!(
-                "Could not deserialize {}: {}",
-                name, err
+                "Could not deserialize {name}: {err}"
             )))
         }
     };
@@ -39,7 +38,7 @@ where
 pub fn load_crate(cache_path: &str, name: &str) -> PyResult<Option<Crate>> {
     let path = std::path::Path::new(cache_path)
         .join("crates")
-        .join(format!("{}.json", name));
+        .join(format!("{name}.json"));
     if !path.exists() {
         return Ok(None);
     }
@@ -53,7 +52,7 @@ pub fn load_crate(cache_path: &str, name: &str) -> PyResult<Option<Crate>> {
 pub fn load_module(cache_path: &str, full_name: &str) -> PyResult<Option<Module>> {
     let path = std::path::Path::new(cache_path)
         .join("modules")
-        .join(format!("{}.json", full_name));
+        .join(format!("{full_name}.json"));
     if !path.exists() {
         return Ok(None);
     }
@@ -67,7 +66,7 @@ pub fn load_module(cache_path: &str, full_name: &str) -> PyResult<Option<Module>
 pub fn load_struct(cache_path: &str, full_name: &str) -> PyResult<Option<Struct>> {
     let path = std::path::Path::new(cache_path)
         .join("structs")
-        .join(format!("{}.json", full_name));
+        .join(format!("{full_name}.json"));
     if !path.exists() {
         return Ok(None);
     }
@@ -81,7 +80,7 @@ pub fn load_struct(cache_path: &str, full_name: &str) -> PyResult<Option<Struct>
 pub fn load_enum(cache_path: &str, full_name: &str) -> PyResult<Option<Enum>> {
     let path = std::path::Path::new(cache_path)
         .join("enums")
-        .join(format!("{}.json", full_name));
+        .join(format!("{full_name}.json"));
     if !path.exists() {
         return Ok(None);
     }
@@ -95,7 +94,7 @@ pub fn load_enum(cache_path: &str, full_name: &str) -> PyResult<Option<Enum>> {
 pub fn load_function(cache_path: &str, full_name: &str) -> PyResult<Option<Function>> {
     let path = std::path::Path::new(cache_path)
         .join("functions")
-        .join(format!("{}.json", full_name));
+        .join(format!("{full_name}.json"));
     if !path.exists() {
         return Ok(None);
     }
@@ -106,14 +105,8 @@ pub fn load_function(cache_path: &str, full_name: &str) -> PyResult<Option<Funct
 
 /// Check if a path is a child of a given parent, and return the fully qualified name of the child.
 fn is_child(path: &std::path::PathBuf, parent: &Vec<String>) -> Option<String> {
-    let name = match path.file_stem() {
-        Some(name) => name,
-        None => return None,
-    };
-    let name = match name.to_str() {
-        Some(name) => name,
-        None => return None,
-    };
+    let name = path.file_stem()?;
+    let name = name.to_str()?;
     let name_path = name.split("::").collect::<Vec<_>>();
     if name_path.len() != parent.len() + 1 {
         return None;
