@@ -52,7 +52,7 @@ class RustEnumAutoDirective(RustAutoDirective):
             sig_lines = [addnodes.desc_signature_line("", f"pub struct {enum.name} {{")]
             for var in enum.variants:
                 # TODO types
-                sig_lines.append(  # noqa: PERF401
+                sig_lines.append(  # ruff: ignore[manual-list-comprehension]
                     addnodes.desc_signature_line(
                         "", f"    {var.name}(...),"
                     )  # TODO properly print variant

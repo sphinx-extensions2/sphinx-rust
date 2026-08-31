@@ -40,7 +40,9 @@ class RustAutoDirective(SphinxDirective):
     @property
     def rust_domain(self) -> RustDomain:
         # avoid circular import
-        from sphinx_rust.domain import RustDomain  # noqa: PLC0415
+        from sphinx_rust.domain import (
+            RustDomain,
+        )
 
         return self.env.domains[RustDomain.name]  # type: ignore[return-value]
 
@@ -178,7 +180,7 @@ def create_object_xref(
         "reftarget": full_name,
     }
     ref = addnodes.pending_xref(full_name, **options)
-    name = full_name.split("::")[-1]
+    name = full_name.rsplit("::", maxsplit=1)[-1]
     ref += nodes.literal(name, name)
 
     return ref
@@ -207,7 +209,7 @@ def create_source_xref(
         "classes": classes or [],
     }
     ref = addnodes.pending_xref(full_name, **options)
-    text = full_name.split("::")[-1] if text is None else text
+    text = full_name.rsplit("::", maxsplit=1)[-1] if text is None else text
     ref += nodes.literal(text, text)
 
     return ref
