@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 __version__: str
 
 def analyze_crate(crate_path: str, cache_path: str) -> AnalysisResult:

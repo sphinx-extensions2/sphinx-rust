@@ -25,14 +25,14 @@ def main() -> None:
     args = parser.parse_args()
     output = Path(args.output).resolve()
     if output.exists() and not args.overwrite:
-        print(  # noqa: T201
+        print(  # ruff: ignore[print]
             f"Output directory {output} already exists. Use --overwrite to overwrite it."
         )
         sys.exit(1)
     output.mkdir(parents=True, exist_ok=True)
     result = analyze_crate(args.crate, str(output))
-    print("Written analysis to", output)  # noqa: T201
-    print(result)  # noqa: T201
+    print("Written analysis to", output)  # ruff: ignore[print]
+    print(result)  # ruff: ignore[print]
 
 
 if __name__ == "__main__":
