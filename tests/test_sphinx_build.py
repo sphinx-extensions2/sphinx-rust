@@ -37,7 +37,7 @@ def test_basic(make_app: type[SphinxTestApp], tmp_path: Path) -> None:
 
     app = make_app("html", srcdir=tmp_path)
     app.build()
-    assert strip_colors(app.warning.getvalue()) == ""  # noqa: PLC1901
+    assert strip_colors(app.warning.getvalue()) == ""  # ruff: ignore[compare-to-empty-string]
 
     assert (
         Path(str(app.outdir)).joinpath("api", "crates", "test", "index.html").exists()
