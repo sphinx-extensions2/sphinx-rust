@@ -143,7 +143,7 @@ class RustDomain(Domain):
             if obj.docname in docnames:
                 self.objects[fullname] = obj
 
-    def resolve_xref(  # noqa: PLR0913, PLR0917
+    def resolve_xref(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
         self,
         env: BuildEnvironment,
         fromdocname: str,
@@ -171,7 +171,7 @@ class RustDomain(Domain):
         obj = matches[0]
         return make_refnode(builder, fromdocname, obj.docname, obj.node_id, contnode)
 
-    def resolve_any_xref(  # noqa: PLR6301
+    def resolve_any_xref(  # ruff: ignore[no-self-use]
         self,
         _env: BuildEnvironment,
         _fromdocname: str,
